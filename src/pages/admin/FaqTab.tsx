@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X, GripVertical, Eye, EyeOff } from 'lucide-react';
-import { subscribeToFaqs, createFaq, updateFaq, deleteFaq } from '@/lib/firebase';
+import { subscribeToFaqs, createFaq, updateFaq, deleteFaq, addAuditLog, getLoggedInAdmin } from '@/lib/firebase';
 import type { FaqItem } from '@/types';
 
 const ICON_OPTIONS = [
@@ -60,7 +60,7 @@ export function FaqTab() {
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button
-                    onClick={async () => { await updateFaq(faq.id, { isActive: !faq.isActive }); }}
+                    onClick={async () => { await updateFaq(faq.id, { isActive: !faq.isActive }); await addAuditLog('UPDATE', 'faq', faq.id, `${faq.isActive ? 'Hid' : 'Showed'} FAQ "${faq.question}"`, getLoggedInAdmin() || ''); }}
                     className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-white/5 transition-all"
                     title={faq.isActive ? 'Hide' : 'Show'}
                   >
@@ -73,7 +73,7 @@ export function FaqTab() {
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={async () => { if (confirm('Delete this FAQ?')) await deleteFaq(faq.id); }}
+                    onClick={async () => { if (confirm('Delete this FAQ?')) { await deleteFaq(faq.id); await addAuditLog('DELETE', 'faq', faq.id, `Deleted FAQ "${faq.question}"`, getLoggedInAdmin() || ''); } }}
                     className="p-1.5 rounded text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -93,9 +93,11 @@ export function FaqTab() {
           onSave={async (data) => {
             if (editing) {
               await updateFaq(editing.id, data);
+              await addAuditLog('UPDATE', 'faq', editing.id, `Updated FAQ "${data.question || editing.question}"`, getLoggedInAdmin() || '');
               setEditing(null);
             } else {
-              await createFaq(data as Omit<FaqItem, 'id'>);
+              const id = await createFaq(data as Omit<FaqItem, 'id'>);
+              await addAuditLog('CREATE', 'faq', id, `Created FAQ "${data.question}"`, getLoggedInAdmin() || '');
               setCreating(false);
             }
           }}

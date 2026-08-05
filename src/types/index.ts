@@ -111,6 +111,16 @@ export interface AdminUser {
   createdAt: string;
 }
 
+export interface AuditLog {
+  id: string;
+  action: string;
+  entity: string;
+  entityId?: string;
+  details?: string;
+  adminUsername: string;
+  timestamp: string;
+}
+
 export type Category = {
   id: string;
   name: string;

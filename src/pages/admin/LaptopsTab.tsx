@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X, Search, Image as ImageIcon } from 'lucide-react';
-import { subscribeToLaptops, getImages, createLaptop, updateLaptop, deleteLaptop } from '@/lib/firebase';
+import { subscribeToLaptops, getImages, createLaptop, updateLaptop, deleteLaptop, addAuditLog, getLoggedInAdmin } from '@/lib/firebase';
 import type { Laptop, ImageRecord, LaptopVariant } from '@/types';
 
 const CATEGORIES = ['best-selling', 'gaming', 'business', 'student', 'new-arrivals'];
@@ -118,7 +118,7 @@ export function LaptopsTab() {
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={async () => { if (confirm('Delete this laptop?')) await deleteLaptop(l.id); }}
+                          onClick={async () => { if (confirm('Delete this laptop?')) { await deleteLaptop(l.id); await addAuditLog('DELETE', 'laptop', l.id, `Deleted laptop "${l.name}"`, getLoggedInAdmin() || ''); } }}
                           className="p-1.5 rounded text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -142,9 +142,11 @@ export function LaptopsTab() {
           onSave={async (data) => {
             if (editing) {
               await updateLaptop(editing.id, data);
+              await addAuditLog('UPDATE', 'laptop', editing.id, `Updated laptop "${data.name || editing.name}"`, getLoggedInAdmin() || '');
               setEditing(null);
             } else {
-              await createLaptop(data as Omit<Laptop, 'id'>);
+              const id = await createLaptop(data as Omit<Laptop, 'id'>);
+              await addAuditLog('CREATE', 'laptop', id, `Created laptop "${data.name}"`, getLoggedInAdmin() || '');
               setCreating(false);
             }
           }}

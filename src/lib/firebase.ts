@@ -15,7 +15,7 @@ import {
   off,
   type DatabaseReference,
 } from 'firebase/database';
-import type { Laptop, Order, ImageRecord, Settings, CartItem, FaqItem, AdminUser } from '@/types';
+import type { Laptop, Order, ImageRecord, Settings, CartItem, FaqItem, AdminUser, AuditLog } from '@/types';
 
 // Firebase config from environment variables
 const firebaseConfig = {
@@ -586,11 +586,8 @@ export async function seedDatabase(): Promise<void> {
     }
   }
 
-  // Seed admin users if empty
-  const adminsSnapshot = await get(getRef('admins')!);
-  if (!adminsSnapshot.exists()) {
-    await createAdminUser('bono', 'admin123', true);
-  }
+  // Admin users are NOT auto-seeded. If none exist, the admin page
+  // will prompt the user to create the main admin account.
 
   // Seed FAQs if empty
   const faqsSnapshot = await get(getRef('faqs')!);
@@ -657,6 +654,11 @@ export async function changeAdminPassword(id: string, newPassword: string): Prom
   await update(getRef(`admins/${id}`)!, { passwordHash: hash, passwordSalt: salt });
 }
 
+export async function updateAdminUsername(id: string, newUsername: string): Promise<void> {
+  if (!db) return;
+  await update(getRef(`admins/${id}`)!, { username: newUsername.toLowerCase() });
+}
+
 export async function hashPassword(password: string, salt: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(password + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -721,4 +723,42 @@ export function clearAdminToken(): void {
 
 export function isAdminAuthenticated(): boolean {
   return !!getAdminToken();
+}
+
+export function setLoggedInAdmin(username: string): void {
+  sessionStorage.setItem('admin_username', username);
+}
+
+export function getLoggedInAdmin(): string | null {
+  return sessionStorage.getItem('admin_username');
+}
+
+export function clearLoggedInAdmin(): void {
+  sessionStorage.removeItem('admin_username');
+}
+
+// ============================================================
+// Audit Log
+// ============================================================
+export async function addAuditLog(action: string, entity: string, entityId: string | null, details: string, adminUsername: string): Promise<void> {
+  if (!db) return;
+  const newRef = push(getRef('auditLogs')!);
+  await set(newRef, {
+    action,
+    entity,
+    entityId: entityId || '',
+    details,
+    adminUsername,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+export async function getAuditLogs(limit = 100): Promise<AuditLog[]> {
+  if (!db) return [];
+  const snapshot = await get(getRef('auditLogs')!);
+  if (!snapshot.exists()) return [];
+  const data = snapshot.val();
+  const logs = Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<AuditLog, 'id'>) }));
+  logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return logs.slice(0, limit);
 }

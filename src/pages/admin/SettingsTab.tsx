@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Save, Lock } from 'lucide-react';
-import { getSettings, updateSettings, getImages } from '@/lib/firebase';
+import { getSettings, updateSettings, getImages, addAuditLog, getLoggedInAdmin } from '@/lib/firebase';
 import type { Settings, ImageRecord } from '@/types';
 
 export function SettingsTab() {
@@ -34,6 +34,7 @@ export function SettingsTab() {
     if (!settings) return;
     setSaving(true);
     await updateSettings(settings);
+    await addAuditLog('UPDATE', 'settings', null, 'Updated site settings', getLoggedInAdmin() || '');
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

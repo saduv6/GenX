@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Trash2, Search } from 'lucide-react';
-import { subscribeToOrders, updateOrderStatus, deleteOrder } from '@/lib/firebase';
+import { subscribeToOrders, updateOrderStatus, deleteOrder, addAuditLog, getLoggedInAdmin } from '@/lib/firebase';
 import type { Order } from '@/types';
 
 type StatusFilter = 'all' | 'new' | 'processing' | 'completed' | 'cancelled';
@@ -32,10 +32,12 @@ export function OrdersTab() {
 
   const handleStatusChange = async (id: string, status: Order['status']) => {
     await updateOrderStatus(id, status);
+    await addAuditLog('UPDATE', 'order', id, `Changed order status to "${status}"`, getLoggedInAdmin() || '');
   };
 
   const handleDelete = async (id: string) => {
     await deleteOrder(id);
+    await addAuditLog('DELETE', 'order', id, 'Deleted order', getLoggedInAdmin() || '');
     setConfirmDelete(null);
   };
 

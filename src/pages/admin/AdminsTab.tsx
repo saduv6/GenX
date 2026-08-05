@@ -1,10 +1,10 @@
 // ============================================================
-// Admin Users Tab - manage admin accounts
+// Admin Users Tab - manage admin accounts with audit logging
 // ============================================================
 
 import { useState, useEffect } from 'react';
-import { UserPlus, Trash2, Lock, Shield } from 'lucide-react';
-import { getAdminUsers, createAdminUser, deleteAdminUser, changeAdminPassword, hashPassword } from '@/lib/firebase';
+import { UserPlus, Trash2, Lock, Shield, Pencil } from 'lucide-react';
+import { getAdminUsers, createAdminUser, deleteAdminUser, changeAdminPassword, updateAdminUsername, hashPassword, addAuditLog, getLoggedInAdmin } from '@/lib/firebase';
 import type { AdminUser } from '@/types';
 
 export function AdminsTab() {
@@ -16,13 +16,21 @@ export function AdminsTab() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Change password for a specific admin
+  // Change password modal
   const [changeTarget, setChangeTarget] = useState<AdminUser | null>(null);
   const [changeCurrent, setChangeCurrent] = useState('');
   const [changeNew, setChangeNew] = useState('');
   const [changeConfirm, setChangeConfirm] = useState('');
   const [changeError, setChangeError] = useState('');
   const [changingPass, setChangingPass] = useState(false);
+
+  // Change username modal
+  const [usernameTarget, setUsernameTarget] = useState<AdminUser | null>(null);
+  const [usernameNew, setUsernameNew] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [changingUsername, setChangingUsername] = useState(false);
+
+  const currentAdmin = getLoggedInAdmin() || '';
 
   const load = async () => {
     const data = await getAdminUsers();
@@ -47,6 +55,7 @@ export function AdminsTab() {
 
     try {
       await createAdminUser(newUsername.trim(), newPassword);
+      await addAuditLog('CREATE', 'admin', null, `Created admin "${newUsername.trim()}"`, currentAdmin);
       setSuccess(`Admin "${newUsername.trim()}" created successfully`);
       setNewUsername('');
       setNewPassword('');
@@ -62,6 +71,7 @@ export function AdminsTab() {
     if (admin.isMain) { setError('Cannot delete the main admin account'); return; }
     if (!confirm(`Delete admin "${admin.username}"?`)) return;
     await deleteAdminUser(admin.id);
+    await addAuditLog('DELETE', 'admin', admin.id, `Deleted admin "${admin.username}"`, currentAdmin);
     await load();
     setSuccess(`Admin "${admin.username}" deleted`);
     setTimeout(() => setSuccess(''), 3000);
@@ -81,6 +91,7 @@ export function AdminsTab() {
       if (hash !== changeTarget.passwordHash) { setChangeError('Current password is incorrect'); return; }
 
       await changeAdminPassword(changeTarget.id, changeNew);
+      await addAuditLog('CHANGE_PASSWORD', 'admin', changeTarget.id, `Changed password for "${changeTarget.username}"`, currentAdmin);
       setChangeTarget(null);
       setChangeCurrent('');
       setChangeNew('');
@@ -92,6 +103,33 @@ export function AdminsTab() {
       setChangeError('Failed to update password');
     } finally {
       setChangingPass(false);
+    }
+  };
+
+  const handleChangeUsername = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUsernameError('');
+
+    if (!usernameTarget) return;
+    if (!usernameNew.trim()) { setUsernameError('Username is required'); return; }
+
+    const existing = admins.find(a => a.id !== usernameTarget.id && a.username === usernameNew.trim().toLowerCase());
+    if (existing) { setUsernameError('Username already exists'); return; }
+
+    setChangingUsername(true);
+    try {
+      const oldName = usernameTarget.username;
+      await updateAdminUsername(usernameTarget.id, usernameNew.trim());
+      await addAuditLog('UPDATE', 'admin', usernameTarget.id, `Changed username from "${oldName}" to "${usernameNew.trim()}"`, currentAdmin);
+      setUsernameTarget(null);
+      setUsernameNew('');
+      setSuccess('Username updated successfully');
+      await load();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch {
+      setUsernameError('Failed to update username');
+    } finally {
+      setChangingUsername(false);
     }
   };
 
@@ -170,6 +208,13 @@ export function AdminsTab() {
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => { setUsernameTarget(admin); setUsernameNew(admin.username); setUsernameError(''); }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
+                title="Change username"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => { setChangeTarget(admin); setChangeError(''); }}
                 className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs hover:bg-white/10 transition-all"
               >
@@ -222,6 +267,35 @@ export function AdminsTab() {
                   {changingPass ? 'Saving...' : 'Update'}
                 </button>
                 <button type="button" onClick={() => { setChangeTarget(null); setChangeCurrent(''); setChangeNew(''); setChangeConfirm(''); }} className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm hover:bg-white/10">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change username modal */}
+      {usernameTarget && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-[#111] rounded-2xl border border-white/10 p-6 max-w-sm w-full">
+            <h2 className="text-white font-bold text-lg mb-1">Change Username</h2>
+            <p className="text-gray-500 text-sm mb-4">Current: <span className="text-green-400 font-medium">{usernameTarget.username}</span></p>
+            <form onSubmit={handleChangeUsername} className="space-y-3">
+              <input
+                type="text"
+                value={usernameNew}
+                onChange={e => setUsernameNew(e.target.value)}
+                placeholder="New username"
+                className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                autoFocus
+              />
+              {usernameError && <p className="text-red-400 text-xs">{usernameError}</p>}
+              <div className="flex gap-2">
+                <button type="submit" disabled={changingUsername} className="flex-1 py-2.5 rounded-lg bg-green-500 text-black font-semibold text-sm hover:opacity-90 disabled:opacity-50">
+                  {changingUsername ? 'Saving...' : 'Update'}
+                </button>
+                <button type="button" onClick={() => { setUsernameTarget(null); setUsernameNew(''); }} className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm hover:bg-white/10">
                   Cancel
                 </button>
               </div>

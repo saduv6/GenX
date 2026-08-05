@@ -4,8 +4,8 @@
 
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { hashPassword, setAdminToken, generateAdminToken, clearAdminToken, isAdminAuthenticated, seedDatabase, findAdminUser, changeAdminPassword } from '@/lib/firebase';
-import { LayoutDashboard, ShoppingBag, Laptop, Image, Settings, LogOut, Lock, Circle as HelpCircle, Users } from 'lucide-react';
+import { hashPassword, setAdminToken, generateAdminToken, clearAdminToken, isAdminAuthenticated, seedDatabase, findAdminUser, changeAdminPassword, getAdminUsers, createAdminUser, setLoggedInAdmin, getLoggedInAdmin, clearLoggedInAdmin, addAuditLog } from '@/lib/firebase';
+import { LayoutDashboard, ShoppingBag, Laptop, Image, Settings, LogOut, Lock, Circle as HelpCircle, Users, ScrollText } from 'lucide-react';
 import { DashboardTab } from './DashboardTab';
 import { OrdersTab } from './OrdersTab';
 import { LaptopsTab } from './LaptopsTab';
@@ -13,12 +13,14 @@ import { ImagesTab } from './ImagesTab';
 import { SettingsTab } from './SettingsTab';
 import { FaqTab } from './FaqTab';
 import { AdminsTab } from './AdminsTab';
+import { AuditLogTab } from './AuditLogTab';
 
 const ADMIN_ROUTE = import.meta.env.VITE_ADMIN_ROUTE || '/admin';
 
 export function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [needsSetup, setNeedsSetup] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -31,6 +33,13 @@ export function AdminPage() {
       await seedDatabase();
       if (isAdminAuthenticated()) {
         setAuthenticated(true);
+        const adminUser = getLoggedInAdmin();
+        if (adminUser) setUsername(adminUser);
+      }
+      // Check if any admin users exist
+      const admins = await getAdminUsers();
+      if (admins.length === 0) {
+        setNeedsSetup(true);
       }
       setChecking(false);
     }
@@ -60,6 +69,7 @@ export function AdminPage() {
       if (hash === user.passwordHash) {
         const token = generateAdminToken();
         setAdminToken(token);
+        setLoggedInAdmin(user.username);
         setAuthenticated(true);
         setLoggedInUserId(user.id);
 
@@ -77,8 +87,45 @@ export function AdminPage() {
     }
   };
 
+  const handleSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (!username.trim() || password.length < 6) {
+        setError('Username required and password must be at least 6 characters');
+        setLoading(false);
+        return;
+      }
+
+      const existing = await findAdminUser(username.trim());
+      if (existing) {
+        setError('Username already exists');
+        setLoading(false);
+        return;
+      }
+
+      await createAdminUser(username.trim(), password, true);
+      const user = await findAdminUser(username.trim());
+      if (user) {
+        const token = generateAdminToken();
+        setAdminToken(token);
+        setLoggedInAdmin(user.username);
+        setAuthenticated(true);
+        setLoggedInUserId(user.id);
+        setNeedsSetup(false);
+      }
+    } catch {
+      setError('Setup failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     clearAdminToken();
+    clearLoggedInAdmin();
     setAuthenticated(false);
     setUsername('');
     setPassword('');
@@ -90,6 +137,53 @@ export function AdminPage() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Fresh database - no admin accounts exist
+  if (needsSetup && !authenticated) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-6 h-6 text-green-400" />
+            </div>
+            <h1 className="text-white text-xl font-bold">Create Main Admin</h1>
+            <p className="text-gray-500 text-sm mt-1">No admin accounts found. Create the main admin account to get started.</p>
+          </div>
+
+          <form onSubmit={handleSetup} className="space-y-4">
+            <div>
+              <input
+                type="text"
+                value={username}
+                onChange={e => { setUsername(e.target.value); setError(''); }}
+                placeholder="Choose a username"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-green-500/50 transition-all"
+                autoFocus
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                value={password}
+                onChange={e => { setPassword(e.target.value); setError(''); }}
+                placeholder="Choose a password (min 6 chars)"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-green-500/50 transition-all"
+              />
+            </div>
+            {error && <p className="text-red-400 text-xs">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-green-500 text-black font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-all"
+            >
+              {loading ? 'Creating...' : 'Create Main Admin'}
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
@@ -146,6 +240,7 @@ export function AdminPage() {
       forceChange={forceChange}
       setForceChange={setForceChange}
       loggedInUserId={loggedInUserId}
+      loggedInUsername={username}
     />
   );
 }
@@ -153,11 +248,12 @@ export function AdminPage() {
 // ============================================================
 // Admin Dashboard Layout with Tabs
 // ============================================================
-function AdminDashboard({ onLogout, forceChange, setForceChange, loggedInUserId }: {
+function AdminDashboard({ onLogout, forceChange, setForceChange, loggedInUserId, loggedInUsername }: {
   onLogout: () => void;
   forceChange: boolean;
   setForceChange: (v: boolean) => void;
   loggedInUserId: string | null;
+  loggedInUsername: string;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -169,6 +265,7 @@ function AdminDashboard({ onLogout, forceChange, setForceChange, loggedInUserId 
     { path: 'images', label: 'Images', icon: Image },
     { path: 'faqs', label: 'FAQs', icon: HelpCircle },
     { path: 'admins', label: 'Admins', icon: Users },
+    { path: 'audit', label: 'Audit Log', icon: ScrollText },
     { path: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -179,7 +276,10 @@ function AdminDashboard({ onLogout, forceChange, setForceChange, loggedInUserId 
       <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
-            <span className="text-white font-bold text-sm">GenX Admin</span>
+            <div className="flex items-center gap-3">
+              <span className="text-white font-bold text-sm">GenX Admin</span>
+              <span className="text-gray-500 text-xs hidden sm:inline">| {loggedInUsername}</span>
+            </div>
             <button
               onClick={onLogout}
               className="text-gray-400 hover:text-red-400 text-sm flex items-center gap-1 transition-colors"
@@ -220,6 +320,7 @@ function AdminDashboard({ onLogout, forceChange, setForceChange, loggedInUserId 
           <Route path="/images" element={<ImagesTab />} />
           <Route path="/faqs" element={<FaqTab />} />
           <Route path="/admins" element={<AdminsTab />} />
+          <Route path="/audit" element={<AuditLogTab />} />
           <Route path="/settings" element={<SettingsTab />} />
           <Route path="*" element={<Navigate to={`${ADMIN_ROUTE}/dashboard`} replace />} />
         </Routes>
@@ -247,13 +348,15 @@ function ForcePasswordChange({ userId, onClose }: { userId: string; onClose: () 
 
     setSaving(true);
     try {
-      const user = await findAdminUser('bono');
+      const adminName = getLoggedInAdmin() || '';
+      const user = await findAdminUser(adminName);
       if (!user) { setError('Account not found'); return; }
 
       const hash = await hashPassword(current, user.passwordSalt);
       if (hash !== user.passwordHash) { setError('Current password is incorrect'); return; }
 
       await changeAdminPassword(userId, newPass);
+      await addAuditLog('CHANGE_PASSWORD', 'admin', userId, 'Changed default password', adminName);
       onClose();
     } catch {
       setError('Failed to update password');

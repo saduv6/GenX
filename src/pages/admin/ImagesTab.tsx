@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Upload, Trash2, Eye, EyeOff } from 'lucide-react';
-import { getImages, createImage, updateImage, deleteImage } from '@/lib/firebase';
+import { getImages, createImage, updateImage, deleteImage, addAuditLog, getLoggedInAdmin } from '@/lib/firebase';
 import type { ImageRecord } from '@/types';
 
 export function ImagesTab() {
@@ -38,11 +38,12 @@ export function ImagesTab() {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
-        await createImage({
+        const newId = await createImage({
           path: base64,
           isActive: true,
           createdAt: new Date().toISOString(),
         });
+        await addAuditLog('CREATE', 'image', newId, 'Uploaded new image', getLoggedInAdmin() || '');
         const updated = await getImages();
         setImages(updated);
         setUploading(false);
@@ -55,12 +56,14 @@ export function ImagesTab() {
 
   const toggleActive = async (img: ImageRecord) => {
     await updateImage(img.id, { isActive: !img.isActive });
+    await addAuditLog('UPDATE', 'image', img.id, `${img.isActive ? 'Deactivated' : 'Activated'} image`, getLoggedInAdmin() || '');
     setImages(prev => prev.map(i => i.id === img.id ? { ...i, isActive: !i.isActive } : i));
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this image?')) return;
     await deleteImage(id);
+    await addAuditLog('DELETE', 'image', id, 'Deleted image', getLoggedInAdmin() || '');
     setImages(prev => prev.filter(i => i.id !== id));
   };
 
