@@ -1,33 +1,35 @@
 // ============================================================
-// Product Detail Page - Full specs, quantity selector, add to cart
-// Fixed: no flickering, stable data fetching on id change
+// Product Detail Page - Full specs, variant selector, add to cart
 // ============================================================
 
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, ShoppingCart, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, ShoppingCart, CircleCheck as CheckCircle, Circle as XCircle } from 'lucide-react';
 import { getLaptopById } from '@/lib/firebase';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { useToast } from '@/hooks/useToast';
-import type { Laptop } from '@/types';
+import { useLanguage } from '@/hooks/useLanguage';
+import type { Laptop, LaptopVariant } from '@/types';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { settings } = useSettings();
   const { addItem } = useCart();
   const { addToast } = useToast();
+  const { lang, t } = useLanguage();
   const [quantity, setQuantity] = useState(1);
   const [laptop, setLaptop] = useState<Laptop | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedVariant, setSelectedVariant] = useState<LaptopVariant | null>(null);
   const primaryColor = settings?.primaryColor || '#00ff00';
 
-  // Stable data fetching — only runs when id changes
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setLaptop(null);
     setQuantity(1);
+    setSelectedVariant(null);
 
     async function load() {
       if (!id) return;
@@ -35,15 +37,16 @@ export function ProductDetailPage() {
         const data = await getLaptopById(id);
         if (!cancelled) {
           setLaptop(data);
+          // Auto-select first in-stock variant, or first variant
+          if (data?.variants && data.variants.length > 0) {
+            const firstAvailable = data.variants.find(v => v.inStock) || data.variants[0];
+            setSelectedVariant(firstAvailable);
+          }
         }
       } catch {
-        if (!cancelled) {
-          setLaptop(null);
-        }
+        if (!cancelled) setLaptop(null);
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -51,15 +54,26 @@ export function ProductDetailPage() {
     return () => { cancelled = true; };
   }, [id]);
 
+  const getLaptopName = (l: Laptop) => (lang === 'ar' && l.nameAr) ? l.nameAr : l.name;
+  const getDescription = (l: Laptop) => (lang === 'ar' && l.descriptionAr) ? l.descriptionAr : l.description;
+
+  const currentPrice = selectedVariant ? selectedVariant.price : (laptop?.price || 0);
+  const currentStock = selectedVariant ? selectedVariant.inStock : (laptop?.inStock ?? false);
+
   const handleAddToCart = () => {
-    if (!laptop || !laptop.inStock) return;
+    if (!laptop || !currentStock) return;
+    const variantLabel = selectedVariant
+      ? `${selectedVariant.ram} / ${selectedVariant.storage}`
+      : undefined;
     addItem({
       laptopId: laptop.id,
-      name: laptop.name,
-      price: laptop.price,
+      name: getLaptopName(laptop),
+      price: currentPrice,
       image: laptop.image,
+      variantId: selectedVariant?.id,
+      variantLabel,
     }, quantity);
-    addToast(`${laptop.name} added to cart (${quantity})`, 'success');
+    addToast(`${getLaptopName(laptop)} ${lang === 'ar' ? 'أضيف للسلة' : 'added to cart'} (${quantity})`, 'success');
   };
 
   if (loading) {
@@ -73,28 +87,30 @@ export function ProductDetailPage() {
   if (!laptop) {
     return (
       <div className="min-h-screen pt-24 px-4 text-center">
-        <p className="text-gray-400 text-lg">Product not found</p>
+        <p className="text-gray-400 text-lg">{t('productNotFound')}</p>
         <Link to="/" className="mt-4 inline-block px-4 py-2 rounded-lg border border-white/10 text-gray-300 hover:text-white text-sm transition-colors">
-          Back to store
+          {t('backToStore')}
         </Link>
       </div>
     );
   }
 
   const specs = [
-    { label: 'Processor', value: laptop.cpu },
-    { label: 'RAM', value: laptop.ram },
-    { label: 'Storage', value: laptop.storage },
-    { label: 'Graphics', value: laptop.gpu },
-    { label: 'Display', value: laptop.screen },
+    { label: t('processor'), value: laptop.cpu },
+    { label: t('ram'), value: laptop.ram },
+    { label: t('storage'), value: laptop.storage },
+    { label: t('graphics'), value: laptop.gpu },
+    { label: t('display'), value: laptop.screen },
   ];
+
+  const hasVariants = laptop.variants && laptop.variants.length > 0;
 
   return (
     <div className="min-h-screen pt-20 pb-12 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Back link */}
         <Link to="/" className="inline-flex items-center gap-1 text-gray-400 hover:text-white text-sm mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to store
+          <ArrowLeft className="w-4 h-4" /> {t('backToStore')}
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -102,7 +118,7 @@ export function ProductDetailPage() {
           <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden aspect-[4/3] flex items-center justify-center">
             <img
               src={laptop.image}
-              alt={laptop.name}
+              alt={getLaptopName(laptop)}
               className="w-full h-full object-cover"
             />
           </div>
@@ -112,7 +128,7 @@ export function ProductDetailPage() {
             <div className="flex items-center gap-2 mb-2">
               {laptop.bestSeller && (
                 <span className="px-2 py-1 rounded text-[10px] font-bold text-black uppercase" style={{ backgroundColor: primaryColor }}>
-                  Best Seller
+                  {t('bestSeller')}
                 </span>
               )}
               <span className="px-2 py-1 rounded text-[10px] font-medium bg-white/5 text-gray-400 uppercase">
@@ -120,32 +136,57 @@ export function ProductDetailPage() {
               </span>
             </div>
 
-            <h1 className="text-3xl font-bold text-white mb-2">{laptop.name}</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">{getLaptopName(laptop)}</h1>
             <p className="text-2xl font-bold mb-4" style={{ color: primaryColor }}>
-              {laptop.price.toLocaleString()} EGP
+              {currentPrice.toLocaleString()} EGP
             </p>
 
             {/* Stock status */}
             <div className="flex items-center gap-2 mb-6">
-              {laptop.inStock ? (
+              {currentStock ? (
                 <>
                   <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="text-green-400 text-sm">In Stock</span>
+                  <span className="text-green-400 text-sm">{t('inStock')}</span>
                 </>
               ) : (
                 <>
                   <XCircle className="w-4 h-4 text-red-400" />
-                  <span className="text-red-400 text-sm">Out of Stock</span>
+                  <span className="text-red-400 text-sm">{t('outOfStockLabel')}</span>
                 </>
               )}
             </div>
 
             {/* Description */}
-            <p className="text-gray-400 text-sm leading-relaxed mb-6">{laptop.description}</p>
+            <p className="text-gray-400 text-sm leading-relaxed mb-6">{getDescription(laptop)}</p>
+
+            {/* Variant Selector */}
+            {hasVariants && (
+              <div className="mb-6">
+                <h3 className="text-white font-semibold text-sm mb-3">{t('selectVariant')}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {laptop.variants.map(variant => (
+                    <button
+                      key={variant.id}
+                      onClick={() => setSelectedVariant(variant)}
+                      disabled={!variant.inStock}
+                      className={`p-3 rounded-xl border text-sm transition-all ${
+                        selectedVariant?.id === variant.id
+                          ? 'border-transparent text-black font-semibold'
+                          : 'border-white/10 text-gray-300 hover:border-white/30'
+                      } ${!variant.inStock ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      style={selectedVariant?.id === variant.id ? { backgroundColor: primaryColor } : {}}
+                    >
+                      <div className="font-bold">{variant.ram} / {variant.storage}</div>
+                      <div className="text-xs mt-1">{variant.price.toLocaleString()} EGP</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Specs */}
             <div className="bg-white/5 rounded-xl border border-white/10 p-4 mb-6">
-              <h3 className="text-white font-semibold text-sm mb-3">Specifications</h3>
+              <h3 className="text-white font-semibold text-sm mb-3">{t('specifications')}</h3>
               <div className="space-y-2">
                 {specs.map(spec => (
                   <div key={spec.label} className="flex justify-between text-sm">
@@ -157,7 +198,7 @@ export function ProductDetailPage() {
             </div>
 
             {/* Quantity and Add to Cart */}
-            {laptop.inStock && (
+            {currentStock && (
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex items-center gap-3 bg-white/5 rounded-xl border border-white/10 px-4 py-2">
                   <button
@@ -180,7 +221,7 @@ export function ProductDetailPage() {
                   style={{ backgroundColor: primaryColor }}
                 >
                   <ShoppingCart className="w-4 h-4" />
-                  Add to Cart
+                  {t('addToCart')}
                 </button>
               </div>
             )}

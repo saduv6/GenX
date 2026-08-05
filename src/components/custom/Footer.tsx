@@ -5,12 +5,15 @@
 import { Link } from 'react-router-dom';
 import { Phone, MessageCircle, Instagram, Facebook, Globe } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
+import { useLanguage } from '@/hooks/useLanguage';
 
 export function Footer() {
   const { settings } = useSettings();
+  const { lang, t } = useLanguage();
 
-  const storeName = settings?.storeName || 'GenX Laptop';
-  const footerText = settings?.footerText || `\u00a9 2026 ${storeName}. All rights reserved.`;
+  const storeName = lang === 'ar' ? (settings?.storeNameAr || settings?.storeName || 'GenX Laptop') : (settings?.storeName || 'GenX Laptop');
+  const footerText = lang === 'ar' ? (settings?.footerTextAr || settings?.footerText || `\u00a9 2026 ${storeName}. All rights reserved.`) : (settings?.footerText || `\u00a9 2026 ${storeName}. All rights reserved.`);
+  const storeDescription = lang === 'ar' ? (settings?.storeDescriptionAr || settings?.storeDescription || 'Your trusted source for premium laptops in Egypt.') : (settings?.storeDescription || 'Your trusted source for premium laptops in Egypt.');
   const contactPhone = settings?.contactPhone;
   const whatsappLink = settings?.whatsappLink;
   const instagramLink = settings?.instagramLink;
@@ -26,24 +29,24 @@ export function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-3">{storeName}</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              {settings?.storeDescription || 'Your trusted source for premium laptops in Egypt.'}
+              {storeDescription}
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-white font-semibold mb-3">Quick Links</h3>
+            <h3 className="text-white font-semibold mb-3">{t('quickLinks')}</h3>
             <div className="space-y-2">
-              <Link to="/faq" className="block text-gray-400 hover:text-white text-sm transition-colors">FAQ</Link>
-              <Link to="/terms" className="block text-gray-400 hover:text-white text-sm transition-colors">Terms of Service</Link>
-              <Link to="/warranty" className="block text-gray-400 hover:text-white text-sm transition-colors">Warranty</Link>
-              <Link to="/compare" className="block text-gray-400 hover:text-white text-sm transition-colors">Compare</Link>
+              <Link to="/faq" className="block text-gray-400 hover:text-white text-sm transition-colors">{t('faq')}</Link>
+              <Link to="/terms" className="block text-gray-400 hover:text-white text-sm transition-colors">{t('termsOfService')}</Link>
+              <Link to="/warranty" className="block text-gray-400 hover:text-white text-sm transition-colors">{t('warranty')}</Link>
+              <Link to="/compare" className="block text-gray-400 hover:text-white text-sm transition-colors">{t('compare')}</Link>
             </div>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="text-white font-semibold mb-3">Contact Us</h3>
+            <h3 className="text-white font-semibold mb-3">{t('contactUs')}</h3>
             <div className="space-y-2">
               {contactPhone && (
                 <div className="flex items-center gap-2 text-gray-400 text-sm">

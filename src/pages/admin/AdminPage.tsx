@@ -5,12 +5,13 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { getSettings, hashPassword, setAdminToken, generateAdminToken, clearAdminToken, isAdminAuthenticated, seedDatabase } from '@/lib/firebase';
-import { LayoutDashboard, ShoppingBag, Laptop, Image, Settings, LogOut, Lock } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Laptop, Image, Settings, LogOut, Lock, Circle as HelpCircle } from 'lucide-react';
 import { DashboardTab } from './DashboardTab';
 import { OrdersTab } from './OrdersTab';
 import { LaptopsTab } from './LaptopsTab';
 import { ImagesTab } from './ImagesTab';
 import { SettingsTab } from './SettingsTab';
+import { FaqTab } from './FaqTab';
 
 const ADMIN_ROUTE = import.meta.env.VITE_ADMIN_ROUTE || '/admin';
 
@@ -143,6 +144,7 @@ function AdminDashboard({ onLogout, forceChange, setForceChange }: {
     { path: 'orders', label: 'Orders', icon: ShoppingBag },
     { path: 'laptops', label: 'Laptops', icon: Laptop },
     { path: 'images', label: 'Images', icon: Image },
+    { path: 'faqs', label: 'FAQs', icon: HelpCircle },
     { path: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -195,6 +197,7 @@ function AdminDashboard({ onLogout, forceChange, setForceChange }: {
           <Route path="/orders" element={<OrdersTab />} />
           <Route path="/laptops" element={<LaptopsTab />} />
           <Route path="/images" element={<ImagesTab />} />
+          <Route path="/faqs" element={<FaqTab />} />
           <Route path="/settings" element={<SettingsTab />} />
           <Route path="*" element={<Navigate to={`${ADMIN_ROUTE}/dashboard`} replace />} />
         </Routes>

@@ -2,9 +2,19 @@
 // GenX Laptop - Type Definitions
 // ============================================================
 
+export interface LaptopVariant {
+  id: string;
+  ram: string;
+  storage: string;
+  price: number;
+  inStock: boolean;
+}
+
 export interface Laptop {
   id: string;
   name: string;
+  nameAr?: string;
+  descriptionAr?: string;
   image: string;
   price: number;
   category: string;
@@ -18,6 +28,7 @@ export interface Laptop {
   isActive: boolean;
   sortOrder: number;
   bestSeller: boolean;
+  variants: LaptopVariant[];
 }
 
 export interface CartItem {
@@ -26,6 +37,8 @@ export interface CartItem {
   price: number;
   quantity: number;
   image: string;
+  variantId?: string;
+  variantLabel?: string;
 }
 
 export interface Cart {
@@ -51,9 +64,22 @@ export interface ImageRecord {
   createdAt: string;
 }
 
+export interface FaqItem {
+  id: string;
+  question: string;
+  questionAr: string;
+  answer: string;
+  answerAr: string;
+  icon: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
 export interface Settings {
   storeName: string;
+  storeNameAr: string;
   storeDescription: string;
+  storeDescriptionAr: string;
   contactPhone: string;
   whatsappLink: string;
   tiktokLink: string;
@@ -61,9 +87,12 @@ export interface Settings {
   facebookLink: string;
   heroTitle: string;
   heroSubtitle: string;
+  heroTitleAr: string;
+  heroSubtitleAr: string;
   logoUrl: string;
   primaryColor: string;
   footerText: string;
+  footerTextAr: string;
   adminPasswordHash: string;
   adminPasswordSalt: string;
 }

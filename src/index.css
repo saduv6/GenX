@@ -70,6 +70,19 @@
     background-color: rgba(0, 255, 0, 0.2);
     color: white;
   }
+
+  /* RTL adjustments */
+  [dir="rtl"] {
+    text-align: right;
+  }
+
+  [dir="rtl"] .ltr-flip {
+    transform: scaleX(-1);
+  }
+
+  [dir="rtl"] body {
+    font-family: 'Cairo', 'Tajawal', 'Inter', system-ui, sans-serif;
+  }
 }
 
 @layer utilities {

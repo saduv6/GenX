@@ -15,7 +15,7 @@ import {
   off,
   type DatabaseReference,
 } from 'firebase/database';
-import type { Laptop, Order, ImageRecord, Settings, CartItem } from '@/types';
+import type { Laptop, Order, ImageRecord, Settings, CartItem, FaqItem } from '@/types';
 
 // Firebase config from environment variables
 const firebaseConfig = {
@@ -158,6 +158,40 @@ export async function updateSettings(partial: Partial<Settings>): Promise<void> 
 }
 
 // ============================================================
+// FAQ
+// ============================================================
+export async function getFaqs(): Promise<FaqItem[]> {
+  const snapshot = await get(getRef('faqs'));
+  if (!snapshot.exists()) return [];
+  const data = snapshot.val();
+  return Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<FaqItem, 'id'>) }));
+}
+
+export async function createFaq(faq: Omit<FaqItem, 'id'>): Promise<string> {
+  const newRef = push(getRef('faqs'));
+  await set(newRef, faq);
+  return newRef.key!;
+}
+
+export async function updateFaq(id: string, data: Partial<FaqItem>): Promise<void> {
+  await update(getRef(`faqs/${id}`), data);
+}
+
+export async function deleteFaq(id: string): Promise<void> {
+  await remove(getRef(`faqs/${id}`));
+}
+
+export function subscribeToFaqs(callback: (faqs: FaqItem[]) => void): () => void {
+  const dbRef = getRef('faqs');
+  onValue(dbRef, (snapshot) => {
+    if (!snapshot.exists()) { callback([]); return; }
+    const data = snapshot.val();
+    callback(Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<FaqItem, 'id'>) })));
+  });
+  return () => off(dbRef);
+}
+
+// ============================================================
 // Realtime listeners
 // ============================================================
 export function subscribeToLaptops(callback: (laptops: Laptop[]) => void): () => void {
@@ -208,6 +242,7 @@ export async function seedDatabase(): Promise<void> {
     const sampleLaptops: Omit<Laptop, 'id'>[] = [
       {
         name: 'GenX UltraBook 14',
+        nameAr: 'GenX ألترابوك 14',
         image: PLACEHOLDER_IMAGE,
         price: 4500,
         category: 'best-selling',
@@ -217,13 +252,20 @@ export async function seedDatabase(): Promise<void> {
         gpu: 'Intel Iris Xe Graphics',
         screen: '14" FHD IPS',
         description: 'Ultra-portable laptop with premium build quality, perfect for professionals on the go. Features a stunning 14-inch FHD display and all-day battery life.',
+        descriptionAr: 'لابتوب خفيف وعالي الجودة، مثالي للمحترفين أثناء التنقل. يتميز بشاشة FHD مقاس 14 بوصة وبطارية تدوم طوال اليوم.',
         inStock: true,
         isActive: true,
         sortOrder: 1,
         bestSeller: true,
+        variants: [
+          { id: 'v1', ram: '8GB', storage: '256GB', price: 4000, inStock: true },
+          { id: 'v2', ram: '8GB', storage: '512GB', price: 4500, inStock: true },
+          { id: 'v3', ram: '16GB', storage: '512GB', price: 5200, inStock: true },
+        ],
       },
       {
         name: 'GenX Gaming 15',
+        nameAr: 'GenX جيمنج 15',
         image: PLACEHOLDER_IMAGE,
         price: 5200,
         category: 'gaming',
@@ -233,13 +275,20 @@ export async function seedDatabase(): Promise<void> {
         gpu: 'NVIDIA GTX 1650 4GB',
         screen: '15.6" FHD 144Hz',
         description: 'Dominate the competition with this powerful gaming laptop. High refresh rate display and dedicated graphics ensure smooth gameplay.',
+        descriptionAr: 'سيطر على المنافسة مع هذا اللابتوب القوي للألعاب. شاشة بمعدل تحديث عالٍ وكرت شاشة مخصص يضمن تجربة لعب سلسة.',
         inStock: true,
         isActive: true,
         sortOrder: 2,
         bestSeller: true,
+        variants: [
+          { id: 'v1', ram: '8GB', storage: '512GB', price: 4800, inStock: true },
+          { id: 'v2', ram: '16GB', storage: '512GB', price: 5200, inStock: true },
+          { id: 'v3', ram: '32GB', storage: '1TB', price: 6500, inStock: true },
+        ],
       },
       {
         name: 'GenX Student 13',
+        nameAr: 'GenX ستيودنت 13',
         image: PLACEHOLDER_IMAGE,
         price: 3200,
         category: 'student',
@@ -249,13 +298,20 @@ export async function seedDatabase(): Promise<void> {
         gpu: 'Intel UHD Graphics',
         screen: '13.3" HD',
         description: 'Affordable and lightweight, designed for students. Perfect for online classes, assignments, and everyday computing tasks.',
+        descriptionAr: 'اقتصادي وخفيف، مصمم للطلاب. مثالي للدروس الأونلاين والواجبات والمهام اليومية.',
         inStock: true,
         isActive: true,
         sortOrder: 3,
         bestSeller: false,
+        variants: [
+          { id: 'v1', ram: '4GB', storage: '128GB', price: 2800, inStock: true },
+          { id: 'v2', ram: '4GB', storage: '256GB', price: 3200, inStock: true },
+          { id: 'v3', ram: '8GB', storage: '256GB', price: 3700, inStock: true },
+        ],
       },
       {
         name: 'GenX Pro 16',
+        nameAr: 'GenX برو 16',
         image: PLACEHOLDER_IMAGE,
         price: 6800,
         category: 'business',
@@ -265,10 +321,16 @@ export async function seedDatabase(): Promise<void> {
         gpu: 'NVIDIA RTX 3050 4GB',
         screen: '16" FHD+',
         description: 'Professional-grade powerhouse for business users and creators. Large display, massive storage, and discrete graphics handle any workload.',
+        descriptionAr: 'قوة احترافية لمستخدمي الأعمال والمبدعين. شاشة كبيرة وتخزين ضخم وكرت شاشة مخصص لأي عبء عمل.',
         inStock: true,
         isActive: true,
         sortOrder: 4,
         bestSeller: false,
+        variants: [
+          { id: 'v1', ram: '16GB', storage: '512GB', price: 6800, inStock: true },
+          { id: 'v2', ram: '32GB', storage: '1TB', price: 8200, inStock: true },
+          { id: 'v3', ram: '64GB', storage: '1TB', price: 9800, inStock: true },
+        ],
       },
     ];
     for (const laptop of sampleLaptops) {
@@ -284,7 +346,9 @@ export async function seedDatabase(): Promise<void> {
     const hash = await hashPassword(defaultPassword, salt);
     const defaultSettings: Settings = {
       storeName: 'GenX Laptop',
+      storeNameAr: 'GenX لابتوب',
       storeDescription: 'Your trusted source for premium laptops in Egypt. We offer the best selection of gaming, business, and student laptops at competitive prices.',
+      storeDescriptionAr: 'مصدر الموثوق للابتوبات الاحترافية في مصر. نقدم أفضل تشكيلة من لابتوبات الألعاب والأعمال والطلاب بأسعار تنافسية.',
       contactPhone: '+20 100 123 4567',
       whatsappLink: 'https://wa.me/201001234567',
       tiktokLink: 'https://tiktok.com/@genxlaptop',
@@ -292,13 +356,32 @@ export async function seedDatabase(): Promise<void> {
       facebookLink: 'https://facebook.com/genxlaptop',
       heroTitle: 'Welcome to GenX Laptop',
       heroSubtitle: 'Discover the Perfect Laptop for Work, Gaming & Study',
+      heroTitleAr: 'مرحباً بك في GenX لابتوب',
+      heroSubtitleAr: 'اكتشف اللابتوب المثالي للعمل والألعاب والدراسة',
       logoUrl: '',
       primaryColor: '#00ff00',
       footerText: '\u00a9 2026 GenX Laptop. All rights reserved.',
+      footerTextAr: '\u00a9 2026 GenX لابتوب. جميع الحقوق محفوظة.',
       adminPasswordHash: hash,
       adminPasswordSalt: salt,
     };
     await saveSettings(defaultSettings);
+  }
+
+  // Seed FAQs if empty
+  const faqsSnapshot = await get(getRef('faqs'));
+  if (!faqsSnapshot.exists()) {
+    const defaultFaqs: Omit<FaqItem, 'id'>[] = [
+      { question: 'How long does delivery take?', questionAr: 'كم يستغرق التوصيل؟', answer: 'Delivery within Cairo and Giza typically takes 2-3 business days. For other governorates, delivery takes 3-5 business days. You will receive a call from our delivery team to schedule the delivery time.', answerAr: 'التوصيل داخل القاهرة والجيزة يستغرق عادة 2-3 أيام عمل. للمحافظات الأخرى، يستغرق التوصيل 3-5 أيام عمل. ستصلك مكالمة من فريق التوصيل لتحديد موعد التسليم.', icon: 'Truck', sortOrder: 1, isActive: true },
+      { question: 'What payment methods do you accept?', questionAr: 'ما هي طرق الدفع المتاحة؟', answer: 'We require a 500 EGP deposit to confirm your order. This amount is deducted from your total purchase price. When you receive your package, you simply pay the remaining balance to our delivery representative.', answerAr: 'نطلب دفعة مقدمة 500 جنيه لتأكيد طلبك. هذا المبلغ يُخصم من إجمالي قيمة الشراء. عند استلام الطرد، تدفع المبلغ المتبقي لمندوب التوصيل.', icon: 'CreditCard', sortOrder: 2, isActive: true },
+      { question: 'How do I track my order?', questionAr: 'كيف أتابع طلبي؟', answer: 'After placing your order, you can contact us via WhatsApp or phone with your order details to check the status. Our team will provide you with delivery updates.', answerAr: 'بعد تأكيد طلبك، يمكنك التواصل معنا عبر واتساب أو الهاتف مع تفاصيل طلبك لمعرفة الحالة. فريقنا سيوفر لك تحديثات التوصيل.', icon: 'Package', sortOrder: 3, isActive: true },
+      { question: 'Can I return or exchange a laptop?', questionAr: 'هل يمكنني إرجاع أو استبدال لابتوب؟', answer: 'Return and warranty policies vary by laptop model, as we offer a wide range of brands and configurations in our website. Please check the specific product page for details, or contact our support team and we\'ll clarify the policy for your chosen laptop before you purchase.', answerAr: 'سياسات الإرجاع والضمان تختلف حسب موديل اللابتوب، حيث نقدم تشكيلة واسعة من الماركات والتجهيزات. يرجى مراجعة صفحة المنتج المحددة للتفاصيل، أو التواصل مع فريق الدعم وسنوضح لك السياسة للابتوب المختار قبل الشراء.', icon: 'RotateCcw', sortOrder: 4, isActive: true },
+      { question: 'Do laptops come with a warranty?', questionAr: 'هل اللابتوبات تأتي بضمان؟', answer: 'All laptops we offer, regardless of brand or configuration, come with a lifetime warranty. For detailed terms and coverage specifics, please refer to the individual product page or contact our support team.', answerAr: 'جميع اللابتوبات التي نقدمها، بغض النظر عن الماركة أو التجهيزة، تأتي بضمان مدى الحياة. للاطلاع على الشروط التفصيلية والتغطية، يرجى مراجعة صفحة المنتج أو التواصل مع فريق الدعم.', icon: 'Shield', sortOrder: 5, isActive: true },
+      { question: 'How can I contact customer support?', questionAr: 'كيف أتواصل مع خدمة العملاء؟', answer: 'Our support team is available 24/7 via phone, WhatsApp, and all our social media channels. Feel free to reach out anytime, and we\'ll be happy to assist you.', answerAr: 'فريق الدعم متاح 24/7 عبر الهاتف وواتساب وجميع قنوات السوشيال ميديا. لا تتردد في التواصل في أي وقت، وسنكون سعداء بمساعدتك.', icon: 'HelpCircle', sortOrder: 6, isActive: true },
+    ];
+    for (const faq of defaultFaqs) {
+      await createFaq(faq);
+    }
   }
 }
 

@@ -1,27 +1,29 @@
 // ============================================================
-// Header - Glassmorphism, dynamic logo, cart, mobile menu
+// Header - Glassmorphism, dynamic logo, cart, mobile menu, lang toggle
 // ============================================================
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Menu, X, Laptop } from 'lucide-react';
+import { ShoppingCart, Menu, X, Laptop, Languages } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useSettings } from '@/hooks/useSettings';
+import { useLanguage } from '@/hooks/useLanguage';
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { totalItems } = useCart();
   const { settings } = useSettings();
   const location = useLocation();
+  const { lang, toggleLang, t } = useLanguage();
 
   const primaryColor = settings?.primaryColor || '#00ff00';
   const logoUrl = settings?.logoUrl;
-  const storeName = settings?.storeName || 'GenX Laptop';
+  const storeName = lang === 'ar' ? (settings?.storeNameAr || settings?.storeName || 'GenX Laptop') : (settings?.storeName || 'GenX Laptop');
 
   const navLinks = [
-    { to: '/', label: 'Home' },
-    { to: '/faq', label: 'FAQ' },
-    { to: '/compare', label: 'Compare' },
+    { to: '/', label: t('home') },
+    { to: '/faq', label: t('faq') },
+    { to: '/compare', label: t('compare') },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -60,6 +62,16 @@ export function Header() {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            {/* Language toggle */}
+            <button
+              onClick={toggleLang}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+              title={lang === 'en' ? 'العربية' : 'English'}
+            >
+              <Languages className="w-4 h-4" />
+              <span>{lang === 'en' ? 'ع' : 'EN'}</span>
+            </button>
+
             {/* Cart */}
             <Link
               to="/cart"
@@ -112,7 +124,7 @@ export function Header() {
               className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"
             >
               <ShoppingCart className="w-4 h-4" />
-              Cart ({totalItems})
+              {t('cart')} ({totalItems})
             </Link>
           </nav>
         </div>

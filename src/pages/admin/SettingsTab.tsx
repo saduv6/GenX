@@ -13,7 +13,6 @@ export function SettingsTab() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Password change state
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -92,49 +91,71 @@ export function SettingsTab() {
     }
   };
 
+  const socialFields = [
+    { name: 'contactPhone', label: 'Contact Phone' },
+    { name: 'whatsappLink', label: 'WhatsApp Link' },
+    { name: 'tiktokLink', label: 'TikTok Link' },
+    { name: 'instagramLink', label: 'Instagram Link' },
+    { name: 'facebookLink', label: 'Facebook Link' },
+  ];
+
   return (
     <div className="space-y-6 max-w-2xl">
-      {/* Store Settings */}
+      {/* Store Settings - English */}
       <div className="bg-white/5 rounded-xl border border-white/10 p-5">
-        <h2 className="text-white font-semibold mb-4">Store Settings</h2>
+        <h2 className="text-white font-semibold mb-4">Store Settings (English)</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-gray-400 text-xs mb-1">Store Name</label>
+            <label className="block text-gray-400 text-xs mb-1">Store Name (EN)</label>
             <input name="storeName" value={settings.storeName} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
           </div>
           <div>
-            <label className="block text-gray-400 text-xs mb-1">Store Description</label>
+            <label className="block text-gray-400 text-xs mb-1">Store Description (EN)</label>
             <textarea name="storeDescription" value={settings.storeDescription} onChange={handleChange} rows={3} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50 resize-none" />
           </div>
+        </div>
+      </div>
 
-          {/* Logo */}
+      {/* Store Settings - Arabic */}
+      <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+        <h2 className="text-white font-semibold mb-4">Store Settings (Arabic)</h2>
+        <div className="space-y-4">
           <div>
-            <label className="block text-gray-400 text-xs mb-1">Logo</label>
-            <div className="flex gap-2">
-              <input name="logoUrl" value={settings.logoUrl} onChange={handleChange} placeholder="Logo URL or base64..." className="flex-1 px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
-            </div>
-            {settings.logoUrl && (
-              <img src={settings.logoUrl} alt="Logo preview" className="mt-2 w-16 h-16 object-contain rounded" />
-            )}
-            {/* Image picker */}
-            {images.length > 0 && (
-              <div className="mt-2">
-                <p className="text-gray-500 text-xs mb-1">Or select from uploaded images:</p>
-                <div className="flex gap-2 flex-wrap">
-                  {images.map(img => (
-                    <button
-                      key={img.id}
-                      onClick={() => handleImageSelect(img.path)}
-                      className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${settings.logoUrl === img.path ? 'border-green-500' : 'border-white/10 hover:border-white/30'}`}
-                    >
-                      <img src={img.path} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <label className="block text-gray-400 text-xs mb-1">Store Name (AR)</label>
+            <input name="storeNameAr" value={settings.storeNameAr} onChange={handleChange} dir="rtl" className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
+          </div>
+          <div>
+            <label className="block text-gray-400 text-xs mb-1">Store Description (AR)</label>
+            <textarea name="storeDescriptionAr" value={settings.storeDescriptionAr} onChange={handleChange} dir="rtl" rows={3} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50 resize-none" />
           </div>
         </div>
+      </div>
+
+      {/* Logo */}
+      <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+        <h2 className="text-white font-semibold mb-4">Logo</h2>
+        <div className="flex gap-2">
+          <input name="logoUrl" value={settings.logoUrl} onChange={handleChange} placeholder="Logo URL or base64..." className="flex-1 px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
+        </div>
+        {settings.logoUrl && (
+          <img src={settings.logoUrl} alt="Logo preview" className="mt-2 w-16 h-16 object-contain rounded" />
+        )}
+        {images.length > 0 && (
+          <div className="mt-2">
+            <p className="text-gray-500 text-xs mb-1">Or select from uploaded images:</p>
+            <div className="flex gap-2 flex-wrap">
+              {images.map(img => (
+                <button
+                  key={img.id}
+                  onClick={() => handleImageSelect(img.path)}
+                  className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${settings.logoUrl === img.path ? 'border-green-500' : 'border-white/10 hover:border-white/30'}`}
+                >
+                  <img src={img.path} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Hero Settings */}
@@ -142,12 +163,20 @@ export function SettingsTab() {
         <h2 className="text-white font-semibold mb-4">Hero Section</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-gray-400 text-xs mb-1">Hero Title</label>
+            <label className="block text-gray-400 text-xs mb-1">Hero Title (EN)</label>
             <input name="heroTitle" value={settings.heroTitle} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
           </div>
           <div>
-            <label className="block text-gray-400 text-xs mb-1">Hero Subtitle</label>
+            <label className="block text-gray-400 text-xs mb-1">Hero Subtitle (EN)</label>
             <input name="heroSubtitle" value={settings.heroSubtitle} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
+          </div>
+          <div>
+            <label className="block text-gray-400 text-xs mb-1">Hero Title (AR)</label>
+            <input name="heroTitleAr" value={settings.heroTitleAr} onChange={handleChange} dir="rtl" className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
+          </div>
+          <div>
+            <label className="block text-gray-400 text-xs mb-1">Hero Subtitle (AR)</label>
+            <input name="heroSubtitleAr" value={settings.heroSubtitleAr} onChange={handleChange} dir="rtl" className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
           </div>
         </div>
       </div>
@@ -156,13 +185,7 @@ export function SettingsTab() {
       <div className="bg-white/5 rounded-xl border border-white/10 p-5">
         <h2 className="text-white font-semibold mb-4">Contact & Social Links</h2>
         <div className="space-y-3">
-          {[
-            { name: 'contactPhone', label: 'Contact Phone' },
-            { name: 'whatsappLink', label: 'WhatsApp Link' },
-            { name: 'tiktokLink', label: 'TikTok Link' },
-            { name: 'instagramLink', label: 'Instagram Link' },
-            { name: 'facebookLink', label: 'Facebook Link' },
-          ].map(field => (
+          {socialFields.map(field => (
             <div key={field.name}>
               <label className="block text-gray-400 text-xs mb-1">{field.label}</label>
               <input name={field.name} value={(settings as unknown as Record<string, string>)[field.name] || ''} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
@@ -183,8 +206,12 @@ export function SettingsTab() {
             </div>
           </div>
           <div>
-            <label className="block text-gray-400 text-xs mb-1">Footer Copyright Text</label>
+            <label className="block text-gray-400 text-xs mb-1">Footer Copyright Text (EN)</label>
             <input name="footerText" value={settings.footerText} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
+          </div>
+          <div>
+            <label className="block text-gray-400 text-xs mb-1">Footer Copyright Text (AR)</label>
+            <input name="footerTextAr" value={settings.footerTextAr} onChange={handleChange} dir="rtl" className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
           </div>
         </div>
       </div>

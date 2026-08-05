@@ -2,26 +2,25 @@
 // Store Page - Homepage with hero, search, filters, product grid
 // ============================================================
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Star, ChevronLeft, ChevronRight, Eye, Plus, BarChart3 } from 'lucide-react';
-import { subscribeToLaptops } from '@/lib/firebase';
+import { Search, Star, ChevronLeft, ChevronRight, Eye, Plus, ChartBar as BarChart3 } from 'lucide-react';
+import { subscribeToLaptops, addCompareId, getCompareIds } from '@/lib/firebase';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { useDebounce } from '@/hooks/useDebounce';
-import { addCompareId, getCompareIds } from '@/lib/firebase';
-import type { Laptop } from '@/types';
-import { useEffect } from 'react';
 import { useToast } from '@/hooks/useToast';
+import { useLanguage } from '@/hooks/useLanguage';
+import type { Laptop } from '@/types';
 
 const CATEGORIES = [
-  { id: 'all', name: 'All', slug: 'all' },
-  { id: 'best-selling', name: 'Best Selling', slug: 'best-selling' },
-  { id: 'gaming', name: 'Gaming', slug: 'gaming' },
-  { id: 'business', name: 'Business', slug: 'business' },
-  { id: 'student', name: 'Student', slug: 'student' },
-  { id: 'new-arrivals', name: 'New Arrivals', slug: 'new-arrivals' },
-];
+  { id: 'all', nameKey: 'all', slug: 'all' },
+  { id: 'best-selling', nameKey: 'bestSelling', slug: 'best-selling' },
+  { id: 'gaming', nameKey: 'gaming', slug: 'gaming' },
+  { id: 'business', nameKey: 'business', slug: 'business' },
+  { id: 'student', nameKey: 'student', slug: 'student' },
+  { id: 'new-arrivals', nameKey: 'newArrivals', slug: 'new-arrivals' },
+] as const;
 
 const ITEMS_PER_PAGE = 6;
 
@@ -29,6 +28,7 @@ export function StorePage() {
   const { settings } = useSettings();
   const { addItem } = useCart();
   const { addToast } = useToast();
+  const { lang, t } = useLanguage();
   const [laptops, setLaptops] = useState<Laptop[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +48,8 @@ export function StorePage() {
     return unsubscribe;
   }, []);
 
-  // Filter and search
+  const getLaptopName = (l: Laptop) => (lang === 'ar' && l.nameAr) ? l.nameAr : l.name;
+
   const filteredLaptops = useMemo(() => {
     let result = laptops;
 
@@ -58,40 +59,44 @@ export function StorePage() {
 
     if (debouncedSearch.trim()) {
       const q = debouncedSearch.toLowerCase();
-      result = result.filter(l => l.name.toLowerCase().includes(q));
+      result = result.filter(l => {
+        const name = getLaptopName(l).toLowerCase();
+        return name.includes(q) || l.name.toLowerCase().includes(q);
+      });
     }
 
-    // Only show active
     result = result.filter(l => l.isActive);
 
     return result;
-  }, [laptops, activeCategory, debouncedSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [laptops, activeCategory, debouncedSearch, lang]);
 
-  // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredLaptops.length / ITEMS_PER_PAGE));
   const paginatedLaptops = filteredLaptops.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Best sellers
   const bestSellers = laptops.filter(l => l.bestSeller && l.isActive).slice(0, 4);
 
   const handleAddToCart = (laptop: Laptop) => {
     addItem({
       laptopId: laptop.id,
-      name: laptop.name,
+      name: getLaptopName(laptop),
       price: laptop.price,
       image: laptop.image,
     });
-    addToast(`${laptop.name} added to cart`, 'success');
+    addToast(`${getLaptopName(laptop)} ${lang === 'ar' ? 'أضيف للسلة' : 'added to cart'}`, 'success');
   };
 
   const handleAddCompare = (id: string) => {
     addCompareId(id);
     setCompareIds(getCompareIds());
-    addToast('Added to comparison', 'success');
+    addToast(lang === 'ar' ? 'أضيف للمقارنة' : 'Added to comparison', 'success');
   };
+
+  const heroTitle = lang === 'ar' ? (settings?.heroTitleAr || settings?.heroTitle || t('home')) : (settings?.heroTitle || t('home'));
+  const heroSubtitle = lang === 'ar' ? (settings?.heroSubtitleAr || settings?.heroSubtitle || '') : (settings?.heroSubtitle || '');
 
   return (
     <div className="min-h-screen">
@@ -108,10 +113,10 @@ export function StorePage() {
             className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight"
             style={{ textShadow: `0 0 40px ${primaryColor}40` }}
           >
-            {settings?.heroTitle || 'Welcome to GenX Laptop'}
+            {heroTitle}
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-8">
-            {settings?.heroSubtitle || 'Discover the Perfect Laptop for Work, Gaming & Study'}
+            {heroSubtitle}
           </p>
         </div>
       </section>
@@ -122,7 +127,7 @@ export function StorePage() {
           <div className="max-w-7xl mx-auto">
             <h2 className="text-white text-xl font-semibold mb-6 flex items-center gap-2">
               <Star className="w-5 h-5" style={{ color: primaryColor }} />
-              Best Sellers
+              {t('bestSellers')}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {bestSellers.map(laptop => (
@@ -133,6 +138,8 @@ export function StorePage() {
                   onAddToCart={handleAddToCart}
                   onAddCompare={handleAddCompare}
                   isCompared={compareIds.includes(laptop.id)}
+                  lang={lang}
+                  t={t}
                 />
               ))}
             </div>
@@ -150,7 +157,7 @@ export function StorePage() {
               type="text"
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              placeholder="Search laptops..."
+              placeholder={t('searchPlaceholder')}
               className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none transition-all text-sm focus:border-green-500/50"
             />
           </div>
@@ -168,7 +175,7 @@ export function StorePage() {
                 }`}
                 style={activeCategory === cat.slug ? { backgroundColor: primaryColor } : {}}
               >
-                {cat.name}
+                {t(cat.nameKey)}
               </button>
             ))}
           </div>
@@ -186,7 +193,7 @@ export function StorePage() {
             </div>
           ) : paginatedLaptops.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-gray-500 text-lg">No laptops found</p>
+              <p className="text-gray-500 text-lg">{t('noLaptopsFound')}</p>
             </div>
           ) : (
             <>
@@ -199,6 +206,8 @@ export function StorePage() {
                     onAddToCart={handleAddToCart}
                     onAddCompare={handleAddCompare}
                     isCompared={compareIds.includes(laptop.id)}
+                    lang={lang}
+                    t={t}
                   />
                 ))}
               </div>
@@ -214,7 +223,7 @@ export function StorePage() {
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <span className="text-gray-400 text-sm">
-                    Page {currentPage} of {totalPages}
+                    {t('page')} {currentPage} {t('of')} {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
@@ -236,13 +245,19 @@ export function StorePage() {
 // ============================================================
 // Product Card Component
 // ============================================================
-function ProductCard({ laptop, primaryColor, onAddToCart, onAddCompare, isCompared }: {
+function ProductCard({ laptop, primaryColor, onAddToCart, onAddCompare, isCompared, lang, t }: {
   laptop: Laptop;
   primaryColor: string;
   onAddToCart: (l: Laptop) => void;
   onAddCompare: (id: string) => void;
   isCompared: boolean;
+  lang: 'en' | 'ar';
+  t: (key: import('@/lib/translations').TranslationKey) => string;
 }) {
+  const name = (lang === 'ar' && laptop.nameAr) ? laptop.nameAr : laptop.name;
+  const hasVariants = laptop.variants && laptop.variants.length > 0;
+  const minPrice = hasVariants ? Math.min(...laptop.variants.map(v => v.price)) : laptop.price;
+
   return (
     <div className="group bg-white/5 rounded-xl border border-white/10 overflow-hidden hover:border-green-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/5 hover:scale-[1.02]"
     >
@@ -250,7 +265,7 @@ function ProductCard({ laptop, primaryColor, onAddToCart, onAddCompare, isCompar
       <Link to={`/product/${laptop.id}`} className="block relative overflow-hidden aspect-[4/3]">
         <img
           src={laptop.image}
-          alt={laptop.name}
+          alt={name}
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
@@ -259,12 +274,17 @@ function ProductCard({ laptop, primaryColor, onAddToCart, onAddCompare, isCompar
             className="absolute top-2 left-2 px-2 py-1 rounded text-[10px] font-bold text-black uppercase tracking-wide"
             style={{ backgroundColor: primaryColor }}
           >
-            Best Seller
+            {t('bestSeller')}
           </span>
         )}
         {!laptop.inStock && (
           <span className="absolute top-2 right-2 px-2 py-1 rounded text-[10px] font-bold bg-red-500 text-white uppercase tracking-wide">
-            Out of Stock
+            {t('outOfStock')}
+          </span>
+        )}
+        {hasVariants && (
+          <span className="absolute bottom-2 left-2 px-2 py-1 rounded text-[10px] font-medium bg-black/70 text-white">
+            {laptop.variants.length} {lang === 'ar' ? 'تجهيزة' : 'configs'}
           </span>
         )}
       </Link>
@@ -272,12 +292,16 @@ function ProductCard({ laptop, primaryColor, onAddToCart, onAddCompare, isCompar
       {/* Content */}
       <div className="p-4">
         <Link to={`/product/${laptop.id}`}>
-          <h3 className="text-white font-semibold text-sm mb-1 group-hover:transition-colors" style={{ ['--hover-color' as string]: primaryColor }}>
-            {laptop.name}
+          <h3 className="text-white font-semibold text-sm mb-1">
+            {name}
           </h3>
         </Link>
         <p className="font-bold mb-3" style={{ color: primaryColor }}>
-          {laptop.price.toLocaleString()} EGP
+          {hasVariants ? (
+            <span>{lang === 'ar' ? 'يبدأ من' : 'from'} {minPrice.toLocaleString()} EGP</span>
+          ) : (
+            <span>{laptop.price.toLocaleString()} EGP</span>
+          )}
         </p>
 
         <div className="flex gap-2">
@@ -285,13 +309,13 @@ function ProductCard({ laptop, primaryColor, onAddToCart, onAddCompare, isCompar
             to={`/product/${laptop.id}`}
             className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10 transition-all text-xs"
           >
-            <Eye className="w-3 h-3" /> Details
+            <Eye className="w-3 h-3" /> {t('details')}
           </Link>
           <button
             onClick={() => onAddCompare(laptop.id)}
             disabled={isCompared}
             className="p-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50"
-            title="Compare"
+            title={t('compare')}
           >
             <BarChart3 className="w-3 h-3" />
           </button>
@@ -300,7 +324,7 @@ function ProductCard({ laptop, primaryColor, onAddToCart, onAddCompare, isCompar
             disabled={!laptop.inStock}
             className="p-2 rounded-lg text-black transition-all hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ backgroundColor: primaryColor }}
-            title="Add to cart"
+            title={t('addToCart')}
           >
             <Plus className="w-3 h-3" />
           </button>

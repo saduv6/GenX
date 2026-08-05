@@ -4,20 +4,21 @@
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Shield, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Shield, CircleCheck as CheckCircle } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useSettings } from '@/hooks/useSettings';
 import { createOrder, clearCart, getSessionId } from '@/lib/firebase';
 import { useToast } from '@/hooks/useToast';
+import { useLanguage } from '@/hooks/useLanguage';
 
 export function CheckoutPage() {
   const { items, totalPrice, clearAll } = useCart();
   const { settings } = useSettings();
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { t } = useLanguage();
   const primaryColor = settings?.primaryColor || '#00ff00';
 
-  // Honeypot field - hidden, must be empty
   const [honeypot, setHoneypot] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -44,14 +45,14 @@ export function CheckoutPage() {
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
-    if (!form.fullName.trim()) e.fullName = 'Full name is required';
-    if (!form.phone.trim()) e.phone = 'Phone number is required';
-    else if (!/^01\d{9}$/.test(form.phone.replace(/\s/g, ''))) e.phone = 'Enter valid Egyptian number (01XXXXXXXXX)';
-    if (!form.street.trim()) e.street = 'Street is required';
-    if (!form.building.trim()) e.building = 'Building number is required';
-    if (!form.apartment.trim()) e.apartment = 'Apartment is required';
-    if (!form.city.trim()) e.city = 'City is required';
-    if (!form.governorate.trim()) e.governorate = 'Governorate is required';
+    if (!form.fullName.trim()) e.fullName = t('fullNameRequired');
+    if (!form.phone.trim()) e.phone = t('phoneRequired');
+    else if (!/^01\d{9}$/.test(form.phone.replace(/\s/g, ''))) e.phone = t('phoneInvalid');
+    if (!form.street.trim()) e.street = t('streetRequired');
+    if (!form.building.trim()) e.building = t('buildingRequired');
+    if (!form.apartment.trim()) e.apartment = t('apartmentRequired');
+    if (!form.city.trim()) e.city = t('cityRequired');
+    if (!form.governorate.trim()) e.governorate = t('governorateRequired');
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -59,14 +60,11 @@ export function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Honeypot check - if filled, silently reject (bot detected)
-    if (honeypot !== '') {
-      return;
-    }
+    if (honeypot !== '') return;
 
     if (!validate()) return;
     if (items.length === 0) {
-      addToast('Your cart is empty', 'error');
+      addToast(t('yourCartIsEmptyShort'), 'error');
       return;
     }
 
@@ -85,20 +83,21 @@ export function CheckoutPage() {
           price: i.price,
           quantity: i.quantity,
           image: i.image,
+          variantId: i.variantId,
+          variantLabel: i.variantLabel,
         })),
         total: `${totalPrice.toLocaleString()} EGP`,
         status: 'new',
         createdAt: new Date().toISOString(),
       });
 
-      // Clear cart
       await clearCart(getSessionId());
       await clearAll();
 
       setSubmitted(true);
-      addToast('Order placed successfully!', 'success');
+      addToast(t('orderPlaced'), 'success');
     } catch {
-      addToast('Failed to place order. Please try again.', 'error');
+      addToast(t('placingOrder'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -109,16 +108,16 @@ export function CheckoutPage() {
       <div className="min-h-screen pt-24 px-4">
         <div className="max-w-md mx-auto text-center py-20">
           <CheckCircle className="w-16 h-16 mx-auto mb-4" style={{ color: primaryColor }} />
-          <h2 className="text-2xl font-bold text-white mb-2">Order Placed!</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">{t('orderPlaced')}</h2>
           <p className="text-gray-400 mb-6">
-            Thank you for your order. We will contact you shortly to confirm delivery details.
+            {t('orderPlacedDesc')}
           </p>
           <button
             onClick={() => navigate('/')}
             className="px-6 py-3 rounded-xl text-black font-semibold transition-all hover:opacity-90"
             style={{ backgroundColor: primaryColor }}
           >
-            Back to Store
+            {t('backToStoreBtn')}
           </button>
         </div>
       </div>
@@ -128,9 +127,9 @@ export function CheckoutPage() {
   if (items.length === 0 && !submitted) {
     return (
       <div className="min-h-screen pt-24 px-4 text-center">
-        <p className="text-gray-400">Your cart is empty</p>
+        <p className="text-gray-400">{t('yourCartIsEmptyShort')}</p>
         <Link to="/" className="mt-4 inline-block px-4 py-2 rounded-lg border border-white/10 text-gray-300 hover:text-white text-sm">
-          Back to store
+          {t('backToStoreShort')}
         </Link>
       </div>
     );
@@ -140,12 +139,12 @@ export function CheckoutPage() {
     <div className="min-h-screen pt-20 pb-12 px-4">
       <div className="max-w-3xl mx-auto">
         <Link to="/cart" className="inline-flex items-center gap-1 text-gray-400 hover:text-white text-sm mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to cart
+          <ArrowLeft className="w-4 h-4" /> {t('backToCart')}
         </Link>
 
-        <h1 className="text-2xl font-bold text-white mb-6">Checkout</h1>
+        <h1 className="text-2xl font-bold text-white mb-6">{t('checkout')}</h1>
 
-        {/* Honeypot - hidden from real users, traps bots */}
+        {/* Honeypot */}
         <div className="hidden" aria-hidden="true">
           <input
             type="text"
@@ -161,17 +160,20 @@ export function CheckoutPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Order Summary */}
           <div className="bg-white/5 rounded-xl border border-white/10 p-4">
-            <h3 className="text-white font-semibold mb-3 text-sm">Order Summary</h3>
+            <h3 className="text-white font-semibold mb-3 text-sm">{t('orderSummary')}</h3>
             <div className="space-y-2 mb-3">
               {items.map(item => (
-                <div key={item.laptopId} className="flex justify-between text-sm">
-                  <span className="text-gray-400">{item.name} x{item.quantity}</span>
+                <div key={item.laptopId + (item.variantId || '')} className="flex justify-between text-sm">
+                  <span className="text-gray-400">
+                    {item.name} x{item.quantity}
+                    {item.variantLabel && <span className="text-gray-600 text-xs block">{item.variantLabel}</span>}
+                  </span>
                   <span className="text-gray-300">{(item.price * item.quantity).toLocaleString()} EGP</span>
                 </div>
               ))}
             </div>
             <div className="border-t border-white/10 pt-3 flex justify-between">
-              <span className="text-white font-semibold">Total</span>
+              <span className="text-white font-semibold">{t('total')}</span>
               <span className="text-xl font-bold" style={{ color: primaryColor }}>
                 {totalPrice.toLocaleString()} EGP
               </span>
@@ -180,22 +182,22 @@ export function CheckoutPage() {
 
           {/* Delivery Info */}
           <div className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-4">
-            <h3 className="text-white font-semibold text-sm">Delivery Information</h3>
+            <h3 className="text-white font-semibold text-sm">{t('deliveryInformation')}</h3>
 
             <div>
-              <label className="block text-gray-400 text-xs mb-1">Full Name *</label>
+              <label className="block text-gray-400 text-xs mb-1">{t('fullName')} *</label>
               <input
                 name="fullName"
                 value={form.fullName}
                 onChange={handleChange}
                 className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all"
-                placeholder="Enter your full name"
+                placeholder={t('fullName')}
               />
               {errors.fullName && <p className="text-red-400 text-xs mt-1">{errors.fullName}</p>}
             </div>
 
             <div>
-              <label className="block text-gray-400 text-xs mb-1">Phone Number * <span className="text-gray-600">(01XXXXXXXXX)</span></label>
+              <label className="block text-gray-400 text-xs mb-1">{t('phoneNumber')} * <span className="text-gray-600">(01XXXXXXXXX)</span></label>
               <input
                 name="phone"
                 value={form.phone}
@@ -208,74 +210,38 @@ export function CheckoutPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-gray-400 text-xs mb-1">Street *</label>
-                <input
-                  name="street"
-                  value={form.street}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all"
-                  placeholder="Street name"
-                />
+                <label className="block text-gray-400 text-xs mb-1">{t('street')} *</label>
+                <input name="street" value={form.street} onChange={handleChange} className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all" placeholder={t('street')} />
                 {errors.street && <p className="text-red-400 text-xs mt-1">{errors.street}</p>}
               </div>
               <div>
-                <label className="block text-gray-400 text-xs mb-1">Building *</label>
-                <input
-                  name="building"
-                  value={form.building}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all"
-                  placeholder="Building number"
-                />
+                <label className="block text-gray-400 text-xs mb-1">{t('building')} *</label>
+                <input name="building" value={form.building} onChange={handleChange} className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all" placeholder={t('building')} />
                 {errors.building && <p className="text-red-400 text-xs mt-1">{errors.building}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-gray-400 text-xs mb-1">Apartment *</label>
-                <input
-                  name="apartment"
-                  value={form.apartment}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all"
-                  placeholder="Apt #"
-                />
+                <label className="block text-gray-400 text-xs mb-1">{t('apartment')} *</label>
+                <input name="apartment" value={form.apartment} onChange={handleChange} className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all" placeholder={t('apartment')} />
                 {errors.apartment && <p className="text-red-400 text-xs mt-1">{errors.apartment}</p>}
               </div>
               <div>
-                <label className="block text-gray-400 text-xs mb-1">City *</label>
-                <input
-                  name="city"
-                  value={form.city}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all"
-                  placeholder="City"
-                />
+                <label className="block text-gray-400 text-xs mb-1">{t('city')} *</label>
+                <input name="city" value={form.city} onChange={handleChange} className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all" placeholder={t('city')} />
                 {errors.city && <p className="text-red-400 text-xs mt-1">{errors.city}</p>}
               </div>
               <div>
-                <label className="block text-gray-400 text-xs mb-1">Governorate *</label>
-                <input
-                  name="governorate"
-                  value={form.governorate}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all"
-                  placeholder="Governorate"
-                />
+                <label className="block text-gray-400 text-xs mb-1">{t('governorate')} *</label>
+                <input name="governorate" value={form.governorate} onChange={handleChange} className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all" placeholder={t('governorate')} />
                 {errors.governorate && <p className="text-red-400 text-xs mt-1">{errors.governorate}</p>}
               </div>
             </div>
 
             <div>
-              <label className="block text-gray-400 text-xs mb-1">Landmark <span className="text-gray-600">(Optional)</span></label>
-              <input
-                name="landmark"
-                value={form.landmark}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all"
-                placeholder="e.g. Near Cairo Mall"
-              />
+              <label className="block text-gray-400 text-xs mb-1">{t('landmarkOptional')}</label>
+              <input name="landmark" value={form.landmark} onChange={handleChange} className="w-full px-4 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-opacity-50 transition-all" placeholder={t('landmark')} />
             </div>
           </div>
 
@@ -283,15 +249,15 @@ export function CheckoutPage() {
           <div className="bg-white/5 rounded-xl border border-white/10 p-4">
             <div className="flex items-center gap-2 mb-2">
               <Shield className="w-4 h-4 text-gray-400" />
-              <h3 className="text-white font-semibold text-sm">Payment Method</h3>
+              <h3 className="text-white font-semibold text-sm">{t('paymentMethod')}</h3>
             </div>
             <div className="flex items-center gap-3 bg-black/50 rounded-lg border border-white/10 px-4 py-3">
               <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center" style={{ borderColor: primaryColor }}>
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: primaryColor }} />
               </div>
               <div>
-                <p className="text-white text-sm font-medium">Cash on Delivery</p>
-                <p className="text-gray-500 text-xs">Pay when you receive your order</p>
+                <p className="text-white text-sm font-medium">{t('cashOnDelivery')}</p>
+                <p className="text-gray-500 text-xs">{t('codDesc')}</p>
               </div>
             </div>
           </div>
@@ -303,7 +269,7 @@ export function CheckoutPage() {
             className="w-full py-3 rounded-xl text-black font-semibold transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: primaryColor }}
           >
-            {submitting ? 'Placing Order...' : 'Place Order'}
+            {submitting ? t('placingOrder') : t('placeOrder')}
           </button>
         </form>
       </div>

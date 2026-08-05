@@ -4,12 +4,14 @@
 
 import { useState, useEffect } from 'react';
 import { hasSplashSeen, setSplashSeen } from '@/lib/firebase';
+import { useLanguage } from '@/hooks/useLanguage';
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
 export function SplashScreen({ onComplete }: SplashScreenProps) {
+  const { t } = useLanguage();
   const [phase, setPhase] = useState<'idle' | 'zooming' | 'done'>('idle');
   const [visible, setVisible] = useState(true);
 
@@ -82,7 +84,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
       </div>
 
       <p className="text-white/60 text-sm mt-8 font-light tracking-widest animate-pulse">
-        Click to enter
+        {t('clickToEnter')}
       </p>
     </div>
   );

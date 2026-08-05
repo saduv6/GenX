@@ -10,6 +10,7 @@ import { Footer } from '@/components/custom/Footer';
 import { ToastContainer } from '@/components/custom/ToastContainer';
 import { SettingsProvider } from '@/hooks/useSettings';
 import { CartProvider } from '@/hooks/useCart';
+import { LanguageProvider } from '@/hooks/useLanguage';
 import { StorePage } from '@/pages/StorePage';
 import { ProductDetailPage } from '@/pages/ProductDetailPage';
 import { CartPage } from '@/pages/CartPage';
@@ -28,22 +29,24 @@ function App() {
   }, []);
 
   return (
-    <SettingsProvider>
-      <CartProvider>
-        <div className="min-h-screen bg-black text-white flex flex-col">
-          <ToastContainer />
-          <SplashScreen onComplete={handleSplashComplete} />
+    <LanguageProvider>
+      <SettingsProvider>
+        <CartProvider>
+          <div className="min-h-screen bg-black text-white flex flex-col">
+            <ToastContainer />
+            <SplashScreen onComplete={handleSplashComplete} />
 
-          <Routes>
-            {/* Admin route - no header/footer */}
-            <Route path={`${ADMIN_ROUTE}/*`} element={<AdminPage />} />
+            <Routes>
+              {/* Admin route - no header/footer */}
+              <Route path={`${ADMIN_ROUTE}/*`} element={<AdminPage />} />
 
-            {/* Customer routes - with header/footer */}
-            <Route path="*" element={<CustomerLayout />} />
-          </Routes>
-        </div>
-      </CartProvider>
-    </SettingsProvider>
+              {/* Customer routes - with header/footer */}
+              <Route path="*" element={<CustomerLayout />} />
+            </Routes>
+          </div>
+        </CartProvider>
+      </SettingsProvider>
+    </LanguageProvider>
   );
 }
 
