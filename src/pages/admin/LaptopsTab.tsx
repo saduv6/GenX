@@ -3,7 +3,7 @@
 // ============================================================
 
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, Search, ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Search, Image as ImageIcon } from 'lucide-react';
 import { subscribeToLaptops, getImages, createLaptop, updateLaptop, deleteLaptop } from '@/lib/firebase';
 import type { Laptop, ImageRecord, LaptopVariant } from '@/types';
 
@@ -200,7 +200,7 @@ function LaptopForm({ laptop, images, onClose, onSave }: {
   const addVariant = () => {
     setForm(prev => ({
       ...prev,
-      variants: [...prev.variants, { id: genVariantId(), ram: '', storage: '', price: 0, inStock: true }],
+      variants: [...prev.variants, { id: genVariantId(), ram: '', storage: '', priceAdjustment: 0, inStock: true }],
     }));
   };
 
@@ -304,7 +304,7 @@ function LaptopForm({ laptop, images, onClose, onSave }: {
               </button>
             </div>
             <p className="text-gray-500 text-xs mb-3">
-              Define your own RAM and storage options with individual pricing. Leave empty if the laptop has only one configuration.
+              Define your own RAM and storage options. Price adjustment is relative to the base price — use positive numbers for upgrades (e.g. +500) and negative for downgrades (e.g. -300). Leave empty if the laptop has only one configuration.
             </p>
             {form.variants.length === 0 ? (
               <div className="bg-black/50 rounded-lg border border-dashed border-white/10 p-4 text-center">
@@ -328,10 +328,10 @@ function LaptopForm({ laptop, images, onClose, onSave }: {
                     />
                     <input
                       type="number"
-                      value={variant.price}
-                      onChange={e => updateVariant(variant.id, 'price', Number(e.target.value))}
-                      placeholder="Price (EGP)"
-                      className="w-full sm:w-28 px-3 py-2 rounded-lg bg-black border border-white/10 text-white text-xs focus:outline-none focus:border-green-500/50"
+                      value={variant.priceAdjustment}
+                      onChange={e => updateVariant(variant.id, 'priceAdjustment', Number(e.target.value))}
+                      placeholder="Price Adj (e.g. +500 or -300)"
+                      className="w-full sm:w-32 px-3 py-2 rounded-lg bg-black border border-white/10 text-white text-xs focus:outline-none focus:border-green-500/50"
                     />
                     <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer whitespace-nowrap">
                       <input

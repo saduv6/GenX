@@ -28,66 +28,90 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
+// Guard: if env vars are missing (e.g. not configured on Netlify), don't crash the app
+const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.databaseURL);
+
+let db: ReturnType<typeof getDatabase> | null = null;
+if (isFirebaseConfigured) {
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getDatabase(app);
+  } catch (e) {
+    console.error('Firebase init failed:', e);
+  }
+}
 
 // ============================================================
-// Helper: get ref
+// Helper: get ref (returns null if DB not available)
 // ============================================================
-const getRef = (path: string): DatabaseReference => ref(db, path);
+const getRef = (path: string): DatabaseReference | null => {
+  if (!db) return null;
+  return ref(db, path);
+};
+
+// Guard wrapper for async functions: returns fallback if DB is not available
 
 // ============================================================
 // Laptops
 // ============================================================
 export async function getLaptops(): Promise<Laptop[]> {
-  const snapshot = await get(getRef('laptops'));
+  if (!db) return [];
+  const snapshot = await get(getRef('laptops')!);
   if (!snapshot.exists()) return [];
   const data = snapshot.val();
   return Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<Laptop, 'id'>) }));
 }
 
 export async function getLaptopById(id: string): Promise<Laptop | null> {
-  const snapshot = await get(getRef(`laptops/${id}`));
+  if (!db) return null;
+  const snapshot = await get(getRef(`laptops/${id}`)!);
   if (!snapshot.exists()) return null;
   return { id, ...snapshot.val() };
 }
 
 export async function createLaptop(laptop: Omit<Laptop, 'id'>): Promise<string> {
-  const newRef = push(getRef('laptops'));
+  if (!db) return '';
+  const newRef = push(getRef('laptops')!);
   await set(newRef, laptop);
   return newRef.key!;
 }
 
 export async function updateLaptop(id: string, data: Partial<Laptop>): Promise<void> {
-  await update(getRef(`laptops/${id}`), data);
+  if (!db) return;
+  await update(getRef(`laptops/${id}`)!, data);
 }
 
 export async function deleteLaptop(id: string): Promise<void> {
-  await remove(getRef(`laptops/${id}`));
+  if (!db) return;
+  await remove(getRef(`laptops/${id}`)!);
 }
 
 // ============================================================
 // Orders
 // ============================================================
 export async function getOrders(): Promise<Order[]> {
-  const snapshot = await get(getRef('orders'));
+  if (!db) return [];
+  const snapshot = await get(getRef('orders')!);
   if (!snapshot.exists()) return [];
   const data = snapshot.val();
   return Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<Order, 'id'>) }));
 }
 
 export async function createOrder(order: Omit<Order, 'id'>): Promise<string> {
-  const newRef = push(getRef('orders'));
+  if (!db) return '';
+  const newRef = push(getRef('orders')!);
   await set(newRef, order);
   return newRef.key!;
 }
 
 export async function updateOrderStatus(id: string, status: Order['status']): Promise<void> {
-  await update(getRef(`orders/${id}`), { status });
+  if (!db) return;
+  await update(getRef(`orders/${id}`)!, { status });
 }
 
 export async function deleteOrder(id: string): Promise<void> {
-  await remove(getRef(`orders/${id}`));
+  if (!db) return;
+  await remove(getRef(`orders/${id}`)!);
 }
 
 // ============================================================
@@ -103,86 +127,101 @@ export function getSessionId(): string {
 }
 
 export async function getCart(sessionId: string): Promise<CartItem[]> {
-  const snapshot = await get(getRef(`carts/${sessionId}`));
+  if (!db) return [];
+  const snapshot = await get(getRef(`carts/${sessionId}`)!);
   if (!snapshot.exists()) return [];
   return snapshot.val().items || [];
 }
 
 export async function saveCart(sessionId: string, items: CartItem[]): Promise<void> {
-  await set(getRef(`carts/${sessionId}`), { items });
+  if (!db) return;
+  await set(getRef(`carts/${sessionId}`)!, { items });
 }
 
 export async function clearCart(sessionId: string): Promise<void> {
-  await remove(getRef(`carts/${sessionId}`));
+  if (!db) return;
+  await remove(getRef(`carts/${sessionId}`)!);
 }
 
 // ============================================================
 // Images
 // ============================================================
 export async function getImages(): Promise<ImageRecord[]> {
-  const snapshot = await get(getRef('images'));
+  if (!db) return [];
+  const snapshot = await get(getRef('images')!);
   if (!snapshot.exists()) return [];
   const data = snapshot.val();
   return Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<ImageRecord, 'id'>) }));
 }
 
 export async function createImage(image: Omit<ImageRecord, 'id'>): Promise<string> {
-  const newRef = push(getRef('images'));
+  if (!db) return '';
+  const newRef = push(getRef('images')!);
   await set(newRef, image);
   return newRef.key!;
 }
 
 export async function updateImage(id: string, data: Partial<ImageRecord>): Promise<void> {
-  await update(getRef(`images/${id}`), data);
+  if (!db) return;
+  await update(getRef(`images/${id}`)!, data);
 }
 
 export async function deleteImage(id: string): Promise<void> {
-  await remove(getRef(`images/${id}`));
+  if (!db) return;
+  await remove(getRef(`images/${id}`)!);
 }
 
 // ============================================================
 // Settings
 // ============================================================
 export async function getSettings(): Promise<Settings | null> {
-  const snapshot = await get(getRef('settings'));
+  if (!db) return null;
+  const snapshot = await get(getRef('settings')!);
   if (!snapshot.exists()) return null;
   return snapshot.val();
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
-  await set(getRef('settings'), settings);
+  if (!db) return;
+  await set(getRef('settings')!, settings);
 }
 
 export async function updateSettings(partial: Partial<Settings>): Promise<void> {
-  await update(getRef('settings'), partial);
+  if (!db) return;
+  await update(getRef('settings')!, partial);
 }
 
 // ============================================================
 // FAQ
 // ============================================================
 export async function getFaqs(): Promise<FaqItem[]> {
-  const snapshot = await get(getRef('faqs'));
+  if (!db) return [];
+  const snapshot = await get(getRef('faqs')!);
   if (!snapshot.exists()) return [];
   const data = snapshot.val();
   return Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<FaqItem, 'id'>) }));
 }
 
 export async function createFaq(faq: Omit<FaqItem, 'id'>): Promise<string> {
-  const newRef = push(getRef('faqs'));
+  if (!db) return '';
+  const newRef = push(getRef('faqs')!);
   await set(newRef, faq);
   return newRef.key!;
 }
 
 export async function updateFaq(id: string, data: Partial<FaqItem>): Promise<void> {
-  await update(getRef(`faqs/${id}`), data);
+  if (!db) return;
+  await update(getRef(`faqs/${id}`)!, data);
 }
 
 export async function deleteFaq(id: string): Promise<void> {
-  await remove(getRef(`faqs/${id}`));
+  if (!db) return;
+  await remove(getRef(`faqs/${id}`)!);
 }
 
 export function subscribeToFaqs(callback: (faqs: FaqItem[]) => void): () => void {
-  const dbRef = getRef('faqs');
+  if (!db) { callback([]); return () => {}; }
+  const dbRef = getRef('faqs')!;
   onValue(dbRef, (snapshot) => {
     if (!snapshot.exists()) { callback([]); return; }
     const data = snapshot.val();
@@ -195,7 +234,8 @@ export function subscribeToFaqs(callback: (faqs: FaqItem[]) => void): () => void
 // Realtime listeners
 // ============================================================
 export function subscribeToLaptops(callback: (laptops: Laptop[]) => void): () => void {
-  const dbRef = getRef('laptops');
+  if (!db) { callback([]); return () => {}; }
+  const dbRef = getRef('laptops')!;
   onValue(dbRef, (snapshot) => {
     if (!snapshot.exists()) { callback([]); return; }
     const data = snapshot.val();
@@ -205,7 +245,8 @@ export function subscribeToLaptops(callback: (laptops: Laptop[]) => void): () =>
 }
 
 export function subscribeToOrders(callback: (orders: Order[]) => void): () => void {
-  const dbRef = getRef('orders');
+  if (!db) { callback([]); return () => {}; }
+  const dbRef = getRef('orders')!;
   onValue(dbRef, (snapshot) => {
     if (!snapshot.exists()) { callback([]); return; }
     const data = snapshot.val();
@@ -215,7 +256,8 @@ export function subscribeToOrders(callback: (orders: Order[]) => void): () => vo
 }
 
 export function subscribeToSettings(callback: (settings: Settings | null) => void): () => void {
-  const dbRef = getRef('settings');
+  if (!db) { callback(null); return () => {}; }
+  const dbRef = getRef('settings')!;
   onValue(dbRef, (snapshot) => {
     callback(snapshot.exists() ? snapshot.val() : null);
   });
@@ -236,8 +278,9 @@ const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,' + btoa(
 );
 
 export async function seedDatabase(): Promise<void> {
+  if (!db) return;
   // Seed laptops if empty
-  const laptopsSnapshot = await get(getRef('laptops'));
+  const laptopsSnapshot = await get(getRef('laptops')!);
   if (!laptopsSnapshot.exists()) {
     const sampleLaptops: Omit<Laptop, 'id'>[] = [
       {
@@ -258,9 +301,9 @@ export async function seedDatabase(): Promise<void> {
         sortOrder: 1,
         bestSeller: true,
         variants: [
-          { id: 'v1', ram: '8GB', storage: '256GB', price: 4000, inStock: true },
-          { id: 'v2', ram: '8GB', storage: '512GB', price: 4500, inStock: true },
-          { id: 'v3', ram: '16GB', storage: '512GB', price: 5200, inStock: true },
+          { id: 'v1', ram: '8GB', storage: '256GB', priceAdjustment: -500, inStock: true },
+          { id: 'v2', ram: '16GB', storage: '512GB', priceAdjustment: 700, inStock: true },
+          { id: 'v3', ram: '16GB', storage: '1TB', priceAdjustment: 1500, inStock: true },
         ],
       },
       {
@@ -281,9 +324,8 @@ export async function seedDatabase(): Promise<void> {
         sortOrder: 2,
         bestSeller: true,
         variants: [
-          { id: 'v1', ram: '8GB', storage: '512GB', price: 4800, inStock: true },
-          { id: 'v2', ram: '16GB', storage: '512GB', price: 5200, inStock: true },
-          { id: 'v3', ram: '32GB', storage: '1TB', price: 6500, inStock: true },
+          { id: 'v1', ram: '8GB', storage: '512GB', priceAdjustment: -400, inStock: true },
+          { id: 'v3', ram: '32GB', storage: '1TB', priceAdjustment: 1300, inStock: true },
         ],
       },
       {
@@ -304,9 +346,8 @@ export async function seedDatabase(): Promise<void> {
         sortOrder: 3,
         bestSeller: false,
         variants: [
-          { id: 'v1', ram: '4GB', storage: '128GB', price: 2800, inStock: true },
-          { id: 'v2', ram: '4GB', storage: '256GB', price: 3200, inStock: true },
-          { id: 'v3', ram: '8GB', storage: '256GB', price: 3700, inStock: true },
+          { id: 'v1', ram: '4GB', storage: '128GB', priceAdjustment: -400, inStock: true },
+          { id: 'v3', ram: '8GB', storage: '256GB', priceAdjustment: 500, inStock: true },
         ],
       },
       {
@@ -327,19 +368,32 @@ export async function seedDatabase(): Promise<void> {
         sortOrder: 4,
         bestSeller: false,
         variants: [
-          { id: 'v1', ram: '16GB', storage: '512GB', price: 6800, inStock: true },
-          { id: 'v2', ram: '32GB', storage: '1TB', price: 8200, inStock: true },
-          { id: 'v3', ram: '64GB', storage: '1TB', price: 9800, inStock: true },
+          { id: 'v1', ram: '16GB', storage: '512GB', priceAdjustment: -1000, inStock: true },
+          { id: 'v2', ram: '32GB', storage: '1TB', priceAdjustment: 1400, inStock: true },
+          { id: 'v3', ram: '64GB', storage: '1TB', priceAdjustment: 3000, inStock: true },
         ],
       },
     ];
     for (const laptop of sampleLaptops) {
       await createLaptop(laptop);
     }
+  } else {
+    // Migrate: patch existing laptops with Arabic + variants if missing
+    const data = laptopsSnapshot.val();
+    for (const [id, value] of Object.entries(data)) {
+      const laptop = value as Laptop;
+      const needsUpdate: Partial<Laptop> = {};
+      if (!laptop.nameAr) needsUpdate.nameAr = laptop.name;
+      if (!laptop.descriptionAr) needsUpdate.descriptionAr = laptop.description;
+      if (!laptop.variants) needsUpdate.variants = [];
+      if (Object.keys(needsUpdate).length > 0) {
+        await updateLaptop(id, needsUpdate);
+      }
+    }
   }
 
   // Seed settings if empty
-  const settingsSnapshot = await get(getRef('settings'));
+  const settingsSnapshot = await get(getRef('settings')!);
   if (!settingsSnapshot.exists()) {
     const salt = crypto.randomUUID().replace(/-/g, '');
     const defaultPassword = 'admin123';
@@ -366,10 +420,22 @@ export async function seedDatabase(): Promise<void> {
       adminPasswordSalt: salt,
     };
     await saveSettings(defaultSettings);
+  } else {
+    // Migrate: patch existing settings with Arabic defaults if missing
+    const existing = settingsSnapshot.val() as Settings;
+    const needsUpdate: Partial<Settings> = {};
+    if (!existing.storeNameAr) needsUpdate.storeNameAr = 'GenX لابتوب';
+    if (!existing.storeDescriptionAr) needsUpdate.storeDescriptionAr = 'مصدر الموثوق للابتوبات الاحترافية في مصر. نقدم أفضل تشكيلة من لابتوبات الألعاب والأعمال والطلاب بأسعار تنافسية.';
+    if (!existing.heroTitleAr) needsUpdate.heroTitleAr = 'مرحباً بك في GenX لابتوب';
+    if (!existing.heroSubtitleAr) needsUpdate.heroSubtitleAr = 'اكتشف اللابتوب المثالي للعمل والألعاب والدراسة';
+    if (!existing.footerTextAr) needsUpdate.footerTextAr = '\u00a9 2026 GenX لابتوب. جميع الحقوق محفوظة.';
+    if (Object.keys(needsUpdate).length > 0) {
+      await updateSettings(needsUpdate);
+    }
   }
 
   // Seed FAQs if empty
-  const faqsSnapshot = await get(getRef('faqs'));
+  const faqsSnapshot = await get(getRef('faqs')!);
   if (!faqsSnapshot.exists()) {
     const defaultFaqs: Omit<FaqItem, 'id'>[] = [
       { question: 'How long does delivery take?', questionAr: 'كم يستغرق التوصيل؟', answer: 'Delivery within Cairo and Giza typically takes 2-3 business days. For other governorates, delivery takes 3-5 business days. You will receive a call from our delivery team to schedule the delivery time.', answerAr: 'التوصيل داخل القاهرة والجيزة يستغرق عادة 2-3 أيام عمل. للمحافظات الأخرى، يستغرق التوصيل 3-5 أيام عمل. ستصلك مكالمة من فريق التوصيل لتحديد موعد التسليم.', icon: 'Truck', sortOrder: 1, isActive: true },

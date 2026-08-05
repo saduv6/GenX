@@ -1,5 +1,6 @@
 // ============================================================
 // Product Detail Page - Full specs, variant selector, add to cart
+// Variants use relative price adjustments from the base price.
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -37,11 +38,7 @@ export function ProductDetailPage() {
         const data = await getLaptopById(id);
         if (!cancelled) {
           setLaptop(data);
-          // Auto-select first in-stock variant, or first variant
-          if (data?.variants && data.variants.length > 0) {
-            const firstAvailable = data.variants.find(v => v.inStock) || data.variants[0];
-            setSelectedVariant(firstAvailable);
-          }
+          // Default to base config (null), not auto-selecting a variant
         }
       } catch {
         if (!cancelled) setLaptop(null);
@@ -57,7 +54,10 @@ export function ProductDetailPage() {
   const getLaptopName = (l: Laptop) => (lang === 'ar' && l.nameAr) ? l.nameAr : l.name;
   const getDescription = (l: Laptop) => (lang === 'ar' && l.descriptionAr) ? l.descriptionAr : l.description;
 
-  const currentPrice = selectedVariant ? selectedVariant.price : (laptop?.price || 0);
+  const basePrice = laptop?.price || 0;
+  const currentPrice = selectedVariant
+    ? basePrice + selectedVariant.priceAdjustment
+    : basePrice;
   const currentStock = selectedVariant ? selectedVariant.inStock : (laptop?.inStock ?? false);
 
   const handleAddToCart = () => {
@@ -74,6 +74,15 @@ export function ProductDetailPage() {
       variantLabel,
     }, quantity);
     addToast(`${getLaptopName(laptop)} ${lang === 'ar' ? 'أضيف للسلة' : 'added to cart'} (${quantity})`, 'success');
+  };
+
+  const handleVariantClick = (variant: LaptopVariant) => {
+    // Toggle: if already selected, deselect back to base config
+    if (selectedVariant?.id === variant.id) {
+      setSelectedVariant(null);
+    } else {
+      setSelectedVariant(variant);
+    }
   };
 
   if (loading) {
@@ -95,15 +104,25 @@ export function ProductDetailPage() {
     );
   }
 
+  const hasVariants = laptop.variants && laptop.variants.length > 0;
+
+  // Show specs: if variant selected, show variant RAM/storage, otherwise base
+  const displayRam = selectedVariant ? selectedVariant.ram : laptop.ram;
+  const displayStorage = selectedVariant ? selectedVariant.storage : laptop.storage;
+
   const specs = [
     { label: t('processor'), value: laptop.cpu },
-    { label: t('ram'), value: laptop.ram },
-    { label: t('storage'), value: laptop.storage },
+    { label: t('ram'), value: displayRam },
+    { label: t('storage'), value: displayStorage },
     { label: t('graphics'), value: laptop.gpu },
     { label: t('display'), value: laptop.screen },
   ];
 
-  const hasVariants = laptop.variants && laptop.variants.length > 0;
+  const formatAdjustment = (adj: number) => {
+    if (adj === 0) return '';
+    if (adj > 0) return `+${adj.toLocaleString()}`;
+    return adj.toLocaleString();
+  };
 
   return (
     <div className="min-h-screen pt-20 pb-12 px-4">
@@ -164,10 +183,26 @@ export function ProductDetailPage() {
               <div className="mb-6">
                 <h3 className="text-white font-semibold text-sm mb-3">{t('selectVariant')}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {/* Base Configuration option */}
+                  <button
+                    onClick={() => setSelectedVariant(null)}
+                    className={`p-3 rounded-xl border text-sm transition-all ${
+                      selectedVariant === null
+                        ? 'border-transparent text-black font-semibold'
+                        : 'border-white/10 text-gray-300 hover:border-white/30'
+                    }`}
+                    style={selectedVariant === null ? { backgroundColor: primaryColor } : {}}
+                  >
+                    <div className="font-bold">{lang === 'ar' ? 'أساسي' : 'Base'}</div>
+                    <div className="text-xs mt-1">{laptop.ram} / {laptop.storage}</div>
+                    <div className="text-xs mt-0.5">{basePrice.toLocaleString()} EGP</div>
+                  </button>
+
+                  {/* Variant options */}
                   {laptop.variants.map(variant => (
                     <button
                       key={variant.id}
-                      onClick={() => setSelectedVariant(variant)}
+                      onClick={() => handleVariantClick(variant)}
                       disabled={!variant.inStock}
                       className={`p-3 rounded-xl border text-sm transition-all ${
                         selectedVariant?.id === variant.id
@@ -177,10 +212,20 @@ export function ProductDetailPage() {
                       style={selectedVariant?.id === variant.id ? { backgroundColor: primaryColor } : {}}
                     >
                       <div className="font-bold">{variant.ram} / {variant.storage}</div>
-                      <div className="text-xs mt-1">{variant.price.toLocaleString()} EGP</div>
+                      <div className="text-xs mt-1">{(basePrice + variant.priceAdjustment).toLocaleString()} EGP</div>
+                      {variant.priceAdjustment !== 0 && (
+                        <div className={`text-[10px] mt-0.5 ${variant.priceAdjustment > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatAdjustment(variant.priceAdjustment)} EGP
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
+                {selectedVariant === null && (
+                  <p className="text-gray-500 text-xs mt-2">
+                    {lang === 'ar' ? 'التجهيزة الأساسية محددة. يمكنك اختيار تجهيزة أخرى أعلاه.' : 'Base configuration selected. Choose another option above to upgrade or downgrade.'}
+                  </p>
+                )}
               </div>
             )}
 

@@ -74,7 +74,9 @@ export function CartPage() {
                   <h3 className="text-white font-medium text-sm hover:opacity-80 transition-opacity">{item.name}</h3>
                 </Link>
                 {item.variantLabel && (
-                  <p className="text-gray-500 text-xs mt-0.5">{item.variantLabel}</p>
+                  <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md bg-green-500/15 text-green-400 text-xs font-medium">
+                    {item.variantLabel}
+                  </span>
                 )}
                 <p className="font-semibold text-sm mt-1" style={{ color: primaryColor }}>
                   {item.price.toLocaleString()} EGP

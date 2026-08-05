@@ -6,7 +6,8 @@ export interface LaptopVariant {
   id: string;
   ram: string;
   storage: string;
-  price: number;
+  /** Relative price adjustment from the laptop's base price. Positive = upgrade cost, negative = downgrade discount. */
+  priceAdjustment: number;
   inStock: boolean;
 }
 

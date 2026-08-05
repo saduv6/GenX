@@ -164,11 +164,16 @@ export function CheckoutPage() {
             <div className="space-y-2 mb-3">
               {items.map(item => (
                 <div key={item.laptopId + (item.variantId || '')} className="flex justify-between text-sm">
-                  <span className="text-gray-400">
-                    {item.name} x{item.quantity}
-                    {item.variantLabel && <span className="text-gray-600 text-xs block">{item.variantLabel}</span>}
+                  <span className="text-gray-400 flex-1">
+                    {item.name} <span className="text-gray-600">×{item.quantity}</span>
+                    {item.variantLabel && (
+                      <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md bg-green-500/15 text-green-400 text-xs font-medium">
+                        <CheckCircle className="w-3 h-3" />
+                        {item.variantLabel}
+                      </span>
+                    )}
                   </span>
-                  <span className="text-gray-300">{(item.price * item.quantity).toLocaleString()} EGP</span>
+                  <span className="text-gray-300 whitespace-nowrap ml-2">{(item.price * item.quantity).toLocaleString()} EGP</span>
                 </div>
               ))}
             </div>
