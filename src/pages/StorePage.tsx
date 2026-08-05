@@ -256,9 +256,6 @@ function ProductCard({ laptop, primaryColor, onAddToCart, onAddCompare, isCompar
 }) {
   const name = (lang === 'ar' && laptop.nameAr) ? laptop.nameAr : laptop.name;
   const hasVariants = laptop.variants && laptop.variants.length > 0;
-  const minPrice = hasVariants
-    ? Math.min(...laptop.variants.map(v => laptop.price + v.priceAdjustment))
-    : laptop.price;
 
   return (
     <div className="group bg-white/5 rounded-xl border border-white/10 overflow-hidden hover:border-green-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/5 hover:scale-[1.02]"
@@ -299,11 +296,7 @@ function ProductCard({ laptop, primaryColor, onAddToCart, onAddCompare, isCompar
           </h3>
         </Link>
         <p className="font-bold mb-3" style={{ color: primaryColor }}>
-          {hasVariants ? (
-            <span>{lang === 'ar' ? 'يبدأ من' : 'from'} {minPrice.toLocaleString()} EGP</span>
-          ) : (
-            <span>{laptop.price.toLocaleString()} EGP</span>
-          )}
+          {laptop.price.toLocaleString()} EGP
         </p>
 
         <div className="flex gap-2">

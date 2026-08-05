@@ -1,74 +1,20 @@
 // ============================================================
-// Warranty Page - Static content about warranty policy
+// Warranty Page - Content editable from dashboard
 // ============================================================
 
-import { Shield, CircleCheck as CheckCircle, Circle as XCircle, Clock, Wrench } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
+import { useSettings } from '@/hooks/useSettings';
 
 export function WarrantyPage() {
   const { lang, t } = useLanguage();
+  const { settings } = useSettings();
 
-  const covered = lang === 'ar' ? [
-    'عيوب التصنيع',
-    'أعطال الهاردوير في الاستخدام العادي',
-    'مكونات معيبة (لوحة أم، معالج، رام)',
-    'عيوب الشاشة (بيكسل ميت، خطوط)',
-    'أعطال الكيبورد والتاتش باد',
-    'عيوب البطارية في أول 6 أشهر',
-    'مشاكل المنافذ والتوصيل',
-  ] : [
-    'Manufacturing defects',
-    'Hardware failures under normal use',
-    'Defective components (motherboard, CPU, RAM)',
-    'Screen defects (dead pixels, lines)',
-    'Keyboard and touchpad malfunctions',
-    'Battery defects within first 6 months',
-    'Port and connectivity issues',
-  ];
+  const content = lang === 'ar'
+    ? (settings?.warrantyContentAr || '')
+    : (settings?.warrantyContent || '');
 
-  const notCovered = lang === 'ar' ? [
-    'أضرار مادية (سقوط، صدمات)',
-    'تلف السوائل بأي نوع',
-    'إصلاحات أو تعديلات غير مصرح بها',
-    'ضرر من طفرات الكهرباء',
-    'الاستهلاك الطبيعي',
-    'مشاكل السوفتوير والفيروسات',
-    'أضرار تجميلية (خدوش، انبعاج)',
-  ] : [
-    'Physical damage (drops, impacts)',
-    'Liquid damage of any kind',
-    'Unauthorized repairs or modifications',
-    'Damage from power surges',
-    'Normal wear and tear',
-    'Software issues and viruses',
-    'Cosmetic damage (scratches, dents)',
-  ];
-
-  const steps = lang === 'ar' ? [
-    { step: '1', title: t('contactSupport'), desc: 'تواصل عبر واتساب أو الهاتف مع تفاصيل طلبك ووصف المشكلة.' },
-    { step: '2', title: t('diagnosis'), desc: 'فريقنا الفني سيشخص المشكلة عن بعد أو يطلب منك إحضار/إرسال الجهاز.' },
-    { step: '3', title: t('repairOrReplace'), desc: 'حسب المشكلة، سنصلح الجهاز أو نستبدله بوحدة مكافئة.' },
-    { step: '4', title: t('returnStep'), desc: 'سيتم إرجاع جهازك بدون تكلفة إضافية ضمن شروط الضمان.' },
-  ] : [
-    { step: '1', title: t('contactSupport'), desc: 'Reach out via WhatsApp or phone with your order details and issue description.' },
-    { step: '2', title: t('diagnosis'), desc: 'Our technical team will diagnose the issue remotely or request you to bring/send the device.' },
-    { step: '3', title: t('repairOrReplace'), desc: 'Depending on the issue, we will repair the device or replace it with an equivalent unit.' },
-    { step: '4', title: t('returnStep'), desc: 'Your device will be returned to you at no additional cost within the warranty terms.' },
-  ];
-
-  const notes = lang === 'ar' ? [
-    'الضمان ساري فقط للمشتري الأصلي وغير قابل للتحويل.',
-    'احتفظ بتأكيد الطلب كإثبات شراء لمطالبات الضمان.',
-    'خدمة الضمان متاحة فقط داخل مصر.',
-    'فقدان البيانات أثناء الإصلاح ليس مسؤوليتنا. يرجى عمل نسخة احتياطية قبل إرسال الجهاز.',
-    'وحدات الاستبدال قد تكون مجددة لكنها تعمل بكامل وظائفها ومقبولة من الناحية التجميلية.',
-  ] : [
-    'Warranty is valid only for the original purchaser and is non-transferable.',
-    'Keep your order confirmation as proof of purchase for warranty claims.',
-    'Warranty service is available only within Egypt.',
-    'Data loss during repair is not our responsibility. Please back up your data before sending the device.',
-    'Replacement units may be refurbished but will be fully functional and cosmetically acceptable.',
-  ];
+  const blocks = parseMarkdown(content);
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
@@ -76,7 +22,6 @@ export function WarrantyPage() {
         <h1 className="text-3xl font-bold text-white mb-2">{t('warrantyTitle')}</h1>
         <p className="text-gray-400 mb-8">{t('warrantySubtitle')}</p>
 
-        {/* Warranty Overview */}
         <div className="bg-white/5 rounded-xl border border-white/10 p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-3 rounded-xl bg-green-500/10">
@@ -87,78 +32,111 @@ export function WarrantyPage() {
               <p className="text-gray-500 text-sm">{t('warrantyAllLaptops')}</p>
             </div>
           </div>
-          <p className="text-gray-400 text-sm leading-relaxed">
-            {t('warrantyDesc')}
-          </p>
         </div>
 
-        {/* Coverage Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          <div className="bg-white/5 rounded-xl border border-white/10 p-5">
-            <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-400" />
-              {t('whatIsCovered')}
-            </h3>
-            <ul className="space-y-2">
-              {covered.map((item, i) => (
-                <li key={i} className="text-gray-400 text-xs flex items-start gap-2">
-                  <span className="text-green-400 mt-0.5">+</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="bg-white/5 rounded-xl border border-white/10 p-5">
-            <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-              <XCircle className="w-4 h-4 text-red-400" />
-              {t('whatIsNotCovered')}
-            </h3>
-            <ul className="space-y-2">
-              {notCovered.map((item, i) => (
-                <li key={i} className="text-gray-400 text-xs flex items-start gap-2">
-                  <span className="text-red-400 mt-0.5">-</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Warranty Process */}
-        <div className="bg-white/5 rounded-xl border border-white/10 p-5 mb-6">
-          <h3 className="text-white font-semibold text-sm mb-4 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-green-400" />
-            {t('howToClaim')}
-          </h3>
-          <div className="space-y-4">
-            {steps.map((s, i) => (
-              <div key={i} className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                  {s.step}
+        <div className="space-y-6">
+          {blocks.map((block, i) => {
+            if (block.type === 'heading') {
+              return (
+                <div key={i} className="bg-white/5 rounded-xl border border-white/10 p-5">
+                  <h2 className="text-white font-semibold text-sm mb-3">{block.text}</h2>
+                  {block.items.length > 0 && (
+                    <ul className="space-y-2">
+                      {block.items.map((item, j) => (
+                        <li key={j} className="text-gray-400 text-xs flex items-start gap-2">
+                          <span className="text-green-400 mt-0.5">+</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {block.body && <p className="text-gray-400 text-sm leading-relaxed mt-2">{block.body}</p>}
                 </div>
-                <div>
-                  <p className="text-white text-sm font-medium">{s.title}</p>
-                  <p className="text-gray-400 text-xs">{s.desc}</p>
+              );
+            }
+            if (block.type === 'paragraph') {
+              return (
+                <div key={i} className="bg-white/5 rounded-xl border border-white/10 p-5">
+                  <p className="text-gray-400 text-sm leading-relaxed">{block.text}</p>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Important Notes */}
-        <div className="bg-white/5 rounded-xl border border-white/10 p-5">
-          <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-            <Wrench className="w-4 h-4 text-green-400" />
-            {t('importantNotes')}
-          </h3>
-          <ul className="space-y-2 text-gray-400 text-xs">
-            {notes.map((note, i) => (
-              <li key={i}>{note}</li>
-            ))}
-          </ul>
+              );
+            }
+            if (block.type === 'steps') {
+              return (
+                <div key={i} className="bg-white/5 rounded-xl border border-white/10 p-5">
+                  <h2 className="text-white font-semibold text-sm mb-4">{block.text}</h2>
+                  <div className="space-y-4">
+                    {block.items.map((item, j) => (
+                      <div key={j} className="flex gap-3">
+                        <div className="w-7 h-7 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                          {j + 1}
+                        </div>
+                        <p className="text-gray-400 text-xs pt-1">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })}
         </div>
       </div>
     </div>
   );
+}
+
+type Block = { type: 'heading' | 'paragraph' | 'steps'; text: string; items: string[]; body: string };
+
+function parseMarkdown(md: string): Block[] {
+  if (!md) return [];
+  const lines = md.split('\n');
+  const blocks: Block[] = [];
+  let current: Block | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    if (trimmed.startsWith('# ')) {
+      if (current) blocks.push(current);
+      current = { type: 'paragraph', text: trimmed.slice(2), items: [], body: '' };
+    } else if (trimmed.startsWith('## ')) {
+      if (current) blocks.push(current);
+      current = { type: 'heading', text: trimmed.slice(3), items: [], body: '' };
+    } else if (/^\d+\.\s/.test(trimmed)) {
+      const item = trimmed.replace(/^\d+\.\s/, '');
+      if (current && current.type === 'heading') {
+        if (!current.body) {
+          current.body = item;
+        } else {
+          current.body += '\n' + item;
+        }
+      } else if (current && current.type === 'steps') {
+        current.items.push(item);
+      } else {
+        if (current) blocks.push(current);
+        current = { type: 'steps', text: 'Steps', items: [item], body: '' };
+      }
+    } else if (trimmed.startsWith('- ')) {
+      const item = trimmed.slice(2);
+      if (current && current.type === 'heading') {
+        current.items.push(item);
+      } else if (current && current.type === 'steps') {
+        current.items.push(item);
+      } else {
+        if (current) blocks.push(current);
+        current = { type: 'heading', text: '', items: [item], body: '' };
+      }
+    } else {
+      if (current && current.type === 'paragraph') {
+        current.text += '\n' + trimmed;
+      } else {
+        if (current) blocks.push(current);
+        current = { type: 'paragraph', text: trimmed, items: [], body: '' };
+      }
+    }
+  }
+  if (current) blocks.push(current);
+  return blocks;
 }

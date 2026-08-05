@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Save, Lock } from 'lucide-react';
-import { getSettings, updateSettings, hashPassword, getImages } from '@/lib/firebase';
+import { getSettings, updateSettings, getImages } from '@/lib/firebase';
 import type { Settings, ImageRecord } from '@/types';
 
 export function SettingsTab() {
@@ -12,13 +12,6 @@ export function SettingsTab() {
   const [images, setImages] = useState<ImageRecord[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-
-  const [currentPass, setCurrentPass] = useState('');
-  const [newPass, setNewPass] = useState('');
-  const [confirmPass, setConfirmPass] = useState('');
-  const [passError, setPassError] = useState('');
-  const [passSuccess, setPassSuccess] = useState(false);
-  const [changingPass, setChangingPass] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -54,41 +47,6 @@ export function SettingsTab() {
   const handleImageSelect = (path: string) => {
     setSettings(prev => prev ? { ...prev, logoUrl: path } : null);
     setSaved(false);
-  };
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPassError('');
-    setPassSuccess(false);
-
-    if (newPass.length < 6) { setPassError('Password must be at least 6 characters'); return; }
-    if (newPass !== confirmPass) { setPassError('Passwords do not match'); return; }
-
-    setChangingPass(true);
-    try {
-      const s = await getSettings();
-      if (!s) { setPassError('Settings not found'); return; }
-
-      const hash = await hashPassword(currentPass, s.adminPasswordSalt);
-      if (hash !== s.adminPasswordHash) { setPassError('Current password is incorrect'); return; }
-
-      const newSalt = crypto.randomUUID().replace(/-/g, '');
-      const newHash = await hashPassword(newPass, newSalt);
-
-      await updateSettings({
-        adminPasswordHash: newHash,
-        adminPasswordSalt: newSalt,
-      });
-
-      setPassSuccess(true);
-      setCurrentPass('');
-      setNewPass('');
-      setConfirmPass('');
-    } catch {
-      setPassError('Failed to update password');
-    } finally {
-      setChangingPass(false);
-    }
   };
 
   const socialFields = [
@@ -222,25 +180,37 @@ export function SettingsTab() {
           <Lock className="w-4 h-4 text-green-400" />
           Change Admin Password
         </h2>
-        <form onSubmit={handlePasswordChange} className="space-y-3">
+        <p className="text-gray-500 text-xs mb-3">Password management has moved to the Admins tab. You can change your password and create new admin accounts there.</p>
+      </div>
+
+      {/* Warranty Content */}
+      <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+        <h2 className="text-white font-semibold mb-4">Warranty Page Content</h2>
+        <div className="space-y-4">
           <div>
-            <label className="block text-gray-400 text-xs mb-1">Current Password</label>
-            <input type="password" value={currentPass} onChange={e => { setCurrentPass(e.target.value); setPassError(''); }} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
+            <label className="block text-gray-400 text-xs mb-1">Warranty Content (EN) - Markdown supported</label>
+            <textarea name="warrantyContent" value={settings.warrantyContent || ''} onChange={handleChange} rows={8} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50 resize-y font-mono" placeholder="# Heading&#10;## Subheading&#10;- Item 1&#10;- Item 2&#10;1. Step one&#10;2. Step two" />
           </div>
           <div>
-            <label className="block text-gray-400 text-xs mb-1">New Password</label>
-            <input type="password" value={newPass} onChange={e => { setNewPass(e.target.value); setPassError(''); }} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
+            <label className="block text-gray-400 text-xs mb-1">Warranty Content (AR) - Markdown supported</label>
+            <textarea name="warrantyContentAr" value={settings.warrantyContentAr || ''} onChange={handleChange} rows={8} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50 resize-y font-mono" dir="rtl" placeholder="# العنوان&#10;## عنوان فرعي&#10;- عنصر 1&#10;- عنصر 2&#10;1. خطوة 1&#10;2. خطوة 2" />
+          </div>
+        </div>
+      </div>
+
+      {/* Terms Content */}
+      <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+        <h2 className="text-white font-semibold mb-4">Terms of Service Page Content</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-gray-400 text-xs mb-1">Terms Content (EN) - Markdown supported</label>
+            <textarea name="termsContent" value={settings.termsContent || ''} onChange={handleChange} rows={8} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50 resize-y font-mono" placeholder="# Terms of Service&#10;## 1. Section&#10;Body text..." />
           </div>
           <div>
-            <label className="block text-gray-400 text-xs mb-1">Confirm New Password</label>
-            <input type="password" value={confirmPass} onChange={e => { setConfirmPass(e.target.value); setPassError(''); }} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50" />
+            <label className="block text-gray-400 text-xs mb-1">Terms Content (AR) - Markdown supported</label>
+            <textarea name="termsContentAr" value={settings.termsContentAr || ''} onChange={handleChange} rows={8} className="w-full px-3 py-2.5 rounded-lg bg-black border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/50 resize-y font-mono" dir="rtl" placeholder="# شروط الخدمة&#10;## 1. قسم&#10;نص..." />
           </div>
-          {passError && <p className="text-red-400 text-xs">{passError}</p>}
-          {passSuccess && <p className="text-green-400 text-xs">Password updated successfully!</p>}
-          <button type="submit" disabled={changingPass} className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm hover:bg-white/10 disabled:opacity-50 transition-all">
-            {changingPass ? 'Updating...' : 'Update Password'}
-          </button>
-        </form>
+        </div>
       </div>
 
       {/* Save */}

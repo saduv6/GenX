@@ -96,6 +96,19 @@ export interface Settings {
   footerTextAr: string;
   adminPasswordHash: string;
   adminPasswordSalt: string;
+  warrantyContent: string;
+  warrantyContentAr: string;
+  termsContent: string;
+  termsContentAr: string;
+}
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  passwordHash: string;
+  passwordSalt: string;
+  isMain: boolean;
+  createdAt: string;
 }
 
 export type Category = {

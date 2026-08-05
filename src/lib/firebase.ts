@@ -15,7 +15,7 @@ import {
   off,
   type DatabaseReference,
 } from 'firebase/database';
-import type { Laptop, Order, ImageRecord, Settings, CartItem, FaqItem } from '@/types';
+import type { Laptop, Order, ImageRecord, Settings, CartItem, FaqItem, AdminUser } from '@/types';
 
 // Firebase config from environment variables
 const firebaseConfig = {
@@ -277,6 +277,150 @@ const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,' + btoa(
   </svg>`
 );
 
+// ============================================================
+// Default content for warranty & terms
+// ============================================================
+
+function getDefaultWarrantyEn(): string {
+  return `# 1-Year Standard Warranty
+
+All laptops purchased from GenX Laptop come with a comprehensive 1-year warranty that covers manufacturing defects and hardware failures under normal use conditions.
+
+## What is Covered
+- Manufacturing defects
+- Hardware failures under normal use
+- Defective components (motherboard, CPU, RAM)
+- Screen defects (dead pixels, lines)
+- Keyboard and touchpad malfunctions
+- Battery defects within first 6 months
+- Port and connectivity issues
+
+## What is Not Covered
+- Physical damage (drops, impacts)
+- Liquid damage of any kind
+- Unauthorized repairs or modifications
+- Damage from power surges
+- Normal wear and tear
+- Software issues and viruses
+- Cosmetic damage (scratches, dents)
+
+## How to Claim Warranty
+1. Contact Support - Reach out via WhatsApp or phone with your order details and issue description.
+2. Diagnosis - Our technical team will diagnose the issue remotely or request you to bring/send the device.
+3. Repair or Replace - Depending on the issue, we will repair the device or replace it with an equivalent unit.
+4. Return - Your device will be returned to you at no additional cost within the warranty terms.
+
+## Important Notes
+- Warranty is valid only for the original purchaser and is non-transferable.
+- Keep your order confirmation as proof of purchase for warranty claims.
+- Warranty service is available only within Egypt.
+- Data loss during repair is not our responsibility. Please back up your data before sending the device.
+- Replacement units may be refurbished but will be fully functional and cosmetically acceptable.`;
+}
+
+function getDefaultWarrantyAr(): string {
+  return `# ضمان سنة واحدة
+
+كل لابتوب مشترى من GenX Laptop يأتي بضمان شامل لمدة سنة يغطي عيوب التصنيع وأعطال الهاردوير في ظل الاستخدام العادي.
+
+## ما هو مشمول
+- عيوب التصنيع
+- أعطال الهاردوير في الاستخدام العادي
+- مكونات معيبة (لوحة أم، معالج، رام)
+- عيوب الشاشة (بيكسل ميت، خطوط)
+- أعطال الكيبورد والتاتش باد
+- عيوب البطارية في أول 6 أشهر
+- مشاكل المنافذ والتوصيل
+
+## ما هو غير مشمول
+- أضرار مادية (سقوط، صدمات)
+- تلف السوائل بأي نوع
+- إصلاحات أو تعديلات غير مصرح بها
+- ضرر من طفرات الكهرباء
+- الاستهلاك الطبيعي
+- مشاكل السوفتوير والفيروسات
+- أضرار تجميلية (خدوش، انبعاج)
+
+## كيف تستخدم الضمان
+1. تواصل مع الدعم - تواصل عبر واتساب أو الهاتف مع تفاصيل طلبك ووصف المشكلة.
+2. التشخيص - فريقنا الفني سيشخص المشكلة عن بعد أو يطلب منك إحضار/إرسال الجهاز.
+3. إصلاح أو استبدال - حسب المشكلة، سنصلح الجهاز أو نستبدله بوحدة مكافئة.
+4. الاسترجاع - سيتم إرجاع جهازك بدون تكلفة إضافية ضمن شروط الضمان.
+
+## ملاحظات هامة
+- الضمان ساري فقط للمشتري الأصلي وغير قابل للتحويل.
+- احتفظ بتأكيد الطلب كإثبات شراء لمطالبات الضمان.
+- خدمة الضمان متاحة فقط داخل مصر.
+- فقدان البيانات أثناء الإصلاح ليس مسؤوليتنا. يرجى عمل نسخة احتياطية قبل إرسال الجهاز.
+- وحدات الاستبدال قد تكون مجددة لكنها تعمل بكامل وظائفها ومقبولة من الناحية التجميلية.`;
+}
+
+function getDefaultTermsEn(): string {
+  return `# Terms of Service
+
+Please read these terms carefully before using our services.
+
+## 1. Acceptance of Terms
+By accessing and using GenX Laptop website, you accept and agree to be bound by these Terms of Service. If you do not agree with any part of these terms, please do not use our services.
+
+## 2. Products and Pricing
+All products listed on our website are subject to availability. We reserve the right to discontinue any product at any time. Prices are listed in Egyptian Pounds (EGP) and are subject to change without notice. The price displayed at the time of order placement is the final price.
+
+## 3. Orders and Payment
+We accept Cash on Delivery (COD) as our sole payment method. Orders are confirmed upon successful submission through our checkout form. We reserve the right to refuse or cancel any order for reasons including but not limited to product availability, errors in product information, or suspected fraudulent activity.
+
+## 4. Delivery
+Delivery times are estimates and may vary based on your location and other factors. We deliver throughout Egypt. Our delivery team will contact you to schedule the delivery. Please ensure that the phone number and address provided are accurate.
+
+## 5. Returns and Exchanges
+You may return or exchange products within 14 days of delivery, provided the item is in original condition with all accessories and packaging intact. To initiate a return, please contact our customer support team.
+
+## 6. Privacy Policy
+We collect personal information such as your name, phone number, and address solely for the purpose of processing and delivering your order. We do not share your information with third parties except as necessary to fulfill your order. We implement reasonable security measures to protect your data.
+
+## 7. Warranty
+All laptops come with a manufacturer warranty as specified on the product page. GenX Laptop provides a 1-year warranty covering manufacturing defects. Physical damage, liquid damage, and unauthorized repairs are not covered.
+
+## 8. Limitation of Liability
+GenX Laptop shall not be liable for any indirect, incidental, or consequential damages arising from the use of our products or services. Our total liability shall not exceed the purchase price of the product in question.
+
+## 9. Contact
+For any questions regarding these terms, please contact us through WhatsApp or the contact information provided on our website.`;
+}
+
+function getDefaultTermsAr(): string {
+  return `# شروط الخدمة
+
+يرجى قراءة هذه الشروط بعناية قبل استخدام خدماتنا.
+
+## 1. قبول الشروط
+بدخولك واستخدامك موقع GenX Laptop، فإنك تقبل وتوافق على الالتزام بشروط الخدمة هذه. إذا لم توافق على أي جزء من هذه الشروط، يرجى عدم استخدام خدماتنا.
+
+## 2. المنتجات والأسعار
+جميع المنتجات المدرجة على موقعنا تخضع للتوفر. نحتفظ بالحق في إيقاف أي منتج في أي وقت. الأسعار مدرجة بالجنيه المصري (EGP) وقابلة للتغيير دون إشعار. السعر المعروض وقت تأكيد الطلب هو السعر النهائي.
+
+## 3. الطلبات والدفع
+نقبل الدفع عند الاستلام (COD) كطريقة الدفع الوحيدة. يتم تأكيد الطلبات عند الإرسال الناجح عبر نموذج الدفع. نحتفظ بالحق في رفض أو إلغاء أي طلب لأسباب تشمل التوفر أو الأخطاء أو النشاط الاحتيالي.
+
+## 4. التوصيل
+أوقات التوصيل تقديرية وقد تختلف حسب موقعك وعوامل أخرى. نوصل في جميع أنحاء مصر. سيتواصل معك فريق التوصيل لجدولة التسليم. يرجى التأكد من صحة رقم الهاتف والعنوان.
+
+## 5. الإرجاع والاستبدال
+يمكنك إرجاع أو استبدال المنتجات خلال 14 يوماً من التسليم، بشرط أن يكون المنتج بحالته الأصلية بكل الملحقات والتغليف. لبدء الإرجاع، يرجى التواصل مع فريق الدعم.
+
+## 6. سياسة الخصوصية
+نجمع المعلومات الشخصية مثل الاسم ورقم الهاتف والعنوان فقط لغرض معالجة وتوصيل طلبك. لا نشارك معلوماتك مع أطراف ثالثة إلا عند الضرورة لتنفيذ طلبك. نطبق تدابير أمنية معقولة لحماية بياناتك.
+
+## 7. الضمان
+جميع اللابتوبات تأتي بضمان الشركة المصنعة كما هو محدد على صفحة المنتج. يوفر GenX Laptop ضمان سنة يغطي عيوب التصنيع. الأضرار المادية وتلف السوائل والإصلاحات غير المصرح بها غير مشمولة.
+
+## 8. حدود المسؤولية
+لا يكون GenX Laptop مسؤولاً عن أي أضرار غير مباشرة أو عرضية أو تبعية ناشئة عن استخدام منتجاتنا أو خدماتنا. إجمالي مسؤوليتنا لا يتجاوز سعر شراء المنتج المعني.
+
+## 9. التواصل
+لأي أسئلة حول هذه الشروط، يرجى التواصل معنا عبر واتساب أو معلومات التواصل المتوفرة على موقعنا.`;
+}
+
 export async function seedDatabase(): Promise<void> {
   if (!db) return;
   // Seed laptops if empty
@@ -418,10 +562,14 @@ export async function seedDatabase(): Promise<void> {
       footerTextAr: '\u00a9 2026 GenX لابتوب. جميع الحقوق محفوظة.',
       adminPasswordHash: hash,
       adminPasswordSalt: salt,
+      warrantyContent: getDefaultWarrantyEn(),
+      warrantyContentAr: getDefaultWarrantyAr(),
+      termsContent: getDefaultTermsEn(),
+      termsContentAr: getDefaultTermsAr(),
     };
     await saveSettings(defaultSettings);
   } else {
-    // Migrate: patch existing settings with Arabic defaults if missing
+    // Migrate: patch existing settings with Arabic + warranty/terms defaults if missing
     const existing = settingsSnapshot.val() as Settings;
     const needsUpdate: Partial<Settings> = {};
     if (!existing.storeNameAr) needsUpdate.storeNameAr = 'GenX لابتوب';
@@ -429,9 +577,19 @@ export async function seedDatabase(): Promise<void> {
     if (!existing.heroTitleAr) needsUpdate.heroTitleAr = 'مرحباً بك في GenX لابتوب';
     if (!existing.heroSubtitleAr) needsUpdate.heroSubtitleAr = 'اكتشف اللابتوب المثالي للعمل والألعاب والدراسة';
     if (!existing.footerTextAr) needsUpdate.footerTextAr = '\u00a9 2026 GenX لابتوب. جميع الحقوق محفوظة.';
+    if (!existing.warrantyContent) needsUpdate.warrantyContent = getDefaultWarrantyEn();
+    if (!existing.warrantyContentAr) needsUpdate.warrantyContentAr = getDefaultWarrantyAr();
+    if (!existing.termsContent) needsUpdate.termsContent = getDefaultTermsEn();
+    if (!existing.termsContentAr) needsUpdate.termsContentAr = getDefaultTermsAr();
     if (Object.keys(needsUpdate).length > 0) {
       await updateSettings(needsUpdate);
     }
+  }
+
+  // Seed admin users if empty
+  const adminsSnapshot = await get(getRef('admins')!);
+  if (!adminsSnapshot.exists()) {
+    await createAdminUser('bono', 'admin123', true);
   }
 
   // Seed FAQs if empty
@@ -454,6 +612,51 @@ export async function seedDatabase(): Promise<void> {
 // ============================================================
 // Password hashing
 // ============================================================
+// ============================================================
+// Admin Users
+// ============================================================
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  if (!db) return [];
+  const snapshot = await get(getRef('admins')!);
+  if (!snapshot.exists()) return [];
+  const data = snapshot.val();
+  return Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<AdminUser, 'id'>) }));
+}
+
+export async function createAdminUser(username: string, password: string, isMain = false): Promise<string> {
+  if (!db) return '';
+  const salt = crypto.randomUUID().replace(/-/g, '');
+  const hash = await hashPassword(password, salt);
+  const newRef = push(getRef('admins')!);
+  await set(newRef, {
+    username: username.toLowerCase(),
+    passwordHash: hash,
+    passwordSalt: salt,
+    isMain,
+    createdAt: new Date().toISOString(),
+  });
+  return newRef.key!;
+}
+
+export async function deleteAdminUser(id: string): Promise<void> {
+  if (!db) return;
+  await remove(getRef(`admins/${id}`)!);
+}
+
+export async function findAdminUser(username: string): Promise<AdminUser | null> {
+  if (!db) return null;
+  const users = await getAdminUsers();
+  return users.find(u => u.username === username.toLowerCase()) || null;
+}
+
+export async function changeAdminPassword(id: string, newPassword: string): Promise<void> {
+  if (!db) return;
+  const salt = crypto.randomUUID().replace(/-/g, '');
+  const hash = await hashPassword(newPassword, salt);
+  await update(getRef(`admins/${id}`)!, { passwordHash: hash, passwordSalt: salt });
+}
+
 export async function hashPassword(password: string, salt: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(password + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);

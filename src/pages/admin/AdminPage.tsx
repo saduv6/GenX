@@ -1,34 +1,34 @@
 // ============================================================
-// Admin Page - Hidden route, password protected, full dashboard
+// Admin Page - Hidden route, username+password protected, dashboard
 // ============================================================
 
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { getSettings, hashPassword, setAdminToken, generateAdminToken, clearAdminToken, isAdminAuthenticated, seedDatabase } from '@/lib/firebase';
-import { LayoutDashboard, ShoppingBag, Laptop, Image, Settings, LogOut, Lock, Circle as HelpCircle } from 'lucide-react';
+import { hashPassword, setAdminToken, generateAdminToken, clearAdminToken, isAdminAuthenticated, seedDatabase, findAdminUser, changeAdminPassword } from '@/lib/firebase';
+import { LayoutDashboard, ShoppingBag, Laptop, Image, Settings, LogOut, Lock, Circle as HelpCircle, Users } from 'lucide-react';
 import { DashboardTab } from './DashboardTab';
 import { OrdersTab } from './OrdersTab';
 import { LaptopsTab } from './LaptopsTab';
 import { ImagesTab } from './ImagesTab';
 import { SettingsTab } from './SettingsTab';
 import { FaqTab } from './FaqTab';
+import { AdminsTab } from './AdminsTab';
 
 const ADMIN_ROUTE = import.meta.env.VITE_ADMIN_ROUTE || '/admin';
 
 export function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [forceChange, setForceChange] = useState(false);
+  const [loggedInUserId, setLoggedInUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function init() {
-      // Seed database on first visit
       await seedDatabase();
-
-      // Check if already authenticated
       if (isAdminAuthenticated()) {
         setAuthenticated(true);
       }
@@ -43,26 +43,32 @@ export function AdminPage() {
     setLoading(true);
 
     try {
-      const settings = await getSettings();
-      if (!settings) {
-        setError('System not initialized');
+      if (!username.trim() || !password) {
+        setError('Enter username and password');
         setLoading(false);
         return;
       }
 
-      const hash = await hashPassword(password, settings.adminPasswordSalt);
-      if (hash === settings.adminPasswordHash) {
+      const user = await findAdminUser(username.trim());
+      if (!user) {
+        setError('Invalid username or password');
+        setLoading(false);
+        return;
+      }
+
+      const hash = await hashPassword(password, user.passwordSalt);
+      if (hash === user.passwordHash) {
         const token = generateAdminToken();
         setAdminToken(token);
         setAuthenticated(true);
+        setLoggedInUserId(user.id);
 
-        // Check if using default password
-        const defaultHash = await hashPassword('admin123', settings.adminPasswordSalt);
+        const defaultHash = await hashPassword('admin123', user.passwordSalt);
         if (hash === defaultHash) {
           setForceChange(true);
         }
       } else {
-        setError('Invalid password');
+        setError('Invalid username or password');
       }
     } catch {
       setError('Login failed');
@@ -74,8 +80,10 @@ export function AdminPage() {
   const handleLogout = () => {
     clearAdminToken();
     setAuthenticated(false);
+    setUsername('');
     setPassword('');
     setForceChange(false);
+    setLoggedInUserId(null);
   };
 
   if (checking) {
@@ -95,10 +103,20 @@ export function AdminPage() {
               <Lock className="w-6 h-6 text-green-400" />
             </div>
             <h1 className="text-white text-xl font-bold">Admin Access</h1>
-            <p className="text-gray-500 text-sm mt-1">Enter your password to continue</p>
+            <p className="text-gray-500 text-sm mt-1">Enter your credentials to continue</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <input
+                type="text"
+                value={username}
+                onChange={e => { setUsername(e.target.value); setError(''); }}
+                placeholder="Username"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-green-500/50 transition-all"
+                autoFocus
+              />
+            </div>
             <div>
               <input
                 type="password"
@@ -106,7 +124,6 @@ export function AdminPage() {
                 onChange={e => { setPassword(e.target.value); setError(''); }}
                 placeholder="Password"
                 className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-green-500/50 transition-all"
-                autoFocus
               />
             </div>
             {error && <p className="text-red-400 text-xs">{error}</p>}
@@ -124,17 +141,23 @@ export function AdminPage() {
   }
 
   return (
-    <AdminDashboard onLogout={handleLogout} forceChange={forceChange} setForceChange={setForceChange} />
+    <AdminDashboard
+      onLogout={handleLogout}
+      forceChange={forceChange}
+      setForceChange={setForceChange}
+      loggedInUserId={loggedInUserId}
+    />
   );
 }
 
 // ============================================================
 // Admin Dashboard Layout with Tabs
 // ============================================================
-function AdminDashboard({ onLogout, forceChange, setForceChange }: {
+function AdminDashboard({ onLogout, forceChange, setForceChange, loggedInUserId }: {
   onLogout: () => void;
   forceChange: boolean;
   setForceChange: (v: boolean) => void;
+  loggedInUserId: string | null;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -145,15 +168,14 @@ function AdminDashboard({ onLogout, forceChange, setForceChange }: {
     { path: 'laptops', label: 'Laptops', icon: Laptop },
     { path: 'images', label: 'Images', icon: Image },
     { path: 'faqs', label: 'FAQs', icon: HelpCircle },
+    { path: 'admins', label: 'Admins', icon: Users },
     { path: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  // Extract current tab from path
   const currentPath = location.pathname.replace(ADMIN_ROUTE, '').replace(/^\//, '') || 'dashboard';
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Top bar */}
       <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
@@ -169,11 +191,11 @@ function AdminDashboard({ onLogout, forceChange, setForceChange }: {
         </div>
       </div>
 
-      {/* Force password change modal */}
-      {forceChange && <ForcePasswordChange onClose={() => setForceChange(false)} />}
+      {forceChange && loggedInUserId && (
+        <ForcePasswordChange userId={loggedInUserId} onClose={() => setForceChange(false)} />
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Tabs */}
         <div className="flex gap-1 mb-6 overflow-x-auto pb-2">
           {tabs.map(tab => (
             <button
@@ -191,13 +213,13 @@ function AdminDashboard({ onLogout, forceChange, setForceChange }: {
           ))}
         </div>
 
-        {/* Tab content */}
         <Routes>
           <Route path="/dashboard" element={<DashboardTab />} />
           <Route path="/orders" element={<OrdersTab />} />
           <Route path="/laptops" element={<LaptopsTab />} />
           <Route path="/images" element={<ImagesTab />} />
           <Route path="/faqs" element={<FaqTab />} />
+          <Route path="/admins" element={<AdminsTab />} />
           <Route path="/settings" element={<SettingsTab />} />
           <Route path="*" element={<Navigate to={`${ADMIN_ROUTE}/dashboard`} replace />} />
         </Routes>
@@ -209,7 +231,7 @@ function AdminDashboard({ onLogout, forceChange, setForceChange }: {
 // ============================================================
 // Force Password Change Modal
 // ============================================================
-function ForcePasswordChange({ onClose }: { onClose: () => void }) {
+function ForcePasswordChange({ userId, onClose }: { userId: string; onClose: () => void }) {
   const [current, setCurrent] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -225,21 +247,13 @@ function ForcePasswordChange({ onClose }: { onClose: () => void }) {
 
     setSaving(true);
     try {
-      const settings = await getSettings();
-      if (!settings) { setError('Settings not found'); return; }
+      const user = await findAdminUser('bono');
+      if (!user) { setError('Account not found'); return; }
 
-      const hash = await hashPassword(current, settings.adminPasswordSalt);
-      if (hash !== settings.adminPasswordHash) { setError('Current password is incorrect'); return; }
+      const hash = await hashPassword(current, user.passwordSalt);
+      if (hash !== user.passwordHash) { setError('Current password is incorrect'); return; }
 
-      const newSalt = crypto.randomUUID().replace(/-/g, '');
-      const newHash = await hashPassword(newPass, newSalt);
-
-      const { updateSettings } = await import('@/lib/firebase');
-      await updateSettings({
-        adminPasswordHash: newHash,
-        adminPasswordSalt: newSalt,
-      });
-
+      await changeAdminPassword(userId, newPass);
       onClose();
     } catch {
       setError('Failed to update password');
