@@ -15,7 +15,7 @@ import {
   off,
   type DatabaseReference,
 } from 'firebase/database';
-import type { Laptop, Order, ImageRecord, Settings, CartItem, FaqItem, AdminUser, AuditLog } from '@/types';
+import type { Laptop, Order, ImageRecord, Settings, CartItem, FaqItem, AdminUser, AuditLog, Category } from '@/types';
 
 // Firebase config from environment variables
 const firebaseConfig = {
@@ -265,6 +265,76 @@ export function subscribeToSettings(callback: (settings: Settings | null) => voi
 }
 
 // ============================================================
+// Categories
+// ============================================================
+export async function getCategories(): Promise<Category[]> {
+  if (!db) return [];
+  const snapshot = await get(getRef('categories')!);
+  if (!snapshot.exists()) return [];
+  const data = snapshot.val();
+  return Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<Category, 'id'>) }));
+}
+
+export function subscribeToCategories(callback: (categories: Category[]) => void): () => void {
+  if (!db) { callback([]); return () => {}; }
+  const dbRef = getRef('categories')!;
+  onValue(dbRef, (snapshot) => {
+    if (!snapshot.exists()) { callback([]); return; }
+    const data = snapshot.val();
+    callback(Object.entries(data).map(([id, value]) => ({ id, ...(value as Omit<Category, 'id'>) })));
+  });
+  return () => off(dbRef);
+}
+
+export async function createCategory(category: Omit<Category, 'id'>): Promise<string> {
+  if (!db) return '';
+  const newRef = push(getRef('categories')!);
+  await set(newRef, category);
+  return newRef.key!;
+}
+
+export async function updateCategory(id: string, data: Partial<Omit<Category, 'id'>>): Promise<void> {
+  if (!db) return;
+  await update(getRef(`categories/${id}`)!, data);
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  if (!db) return;
+  const categories = await getCategories();
+  const children = categories.filter(c => c.parentId === id);
+  for (const child of children) {
+    await update(getRef(`categories/${child.id}`)!, { parentId: '' });
+  }
+  const laptops = await getLaptops();
+  for (const laptop of laptops) {
+    const inCategories = laptop.categories?.includes(id);
+    if (!inCategories && laptop.category !== id) continue;
+    await update(getRef(`laptops/${laptop.id}`)!, {
+      categories: (laptop.categories || []).filter(c => c !== id),
+      category: laptop.category === id ? '' : laptop.category,
+    });
+  }
+  await remove(getRef(`categories/${id}`)!);
+}
+
+const DEFAULT_CATEGORIES: Record<string, Omit<Category, 'id'>> = {
+  'best-selling': { nameEn: 'Best Selling', nameAr: 'الأكثر مبيعاً', image: '', parentId: '', sortOrder: 1, isActive: true },
+  'gaming': { nameEn: 'Gaming', nameAr: 'ألعاب', image: '', parentId: '', sortOrder: 2, isActive: true },
+  'business': { nameEn: 'Business', nameAr: 'أعمال', image: '', parentId: '', sortOrder: 3, isActive: true },
+  'student': { nameEn: 'Student', nameAr: 'طلاب', image: '', parentId: '', sortOrder: 4, isActive: true },
+  'new-arrivals': { nameEn: 'New Arrivals', nameAr: 'وصل حديثاً', image: '', parentId: '', sortOrder: 5, isActive: true },
+};
+
+async function seedCategories(): Promise<void> {
+  if (!db) return;
+  const snapshot = await get(getRef('categories')!);
+  if (snapshot.exists()) return;
+  for (const [id, category] of Object.entries(DEFAULT_CATEGORIES)) {
+    await set(getRef(`categories/${id}`)!, category);
+  }
+}
+
+// ============================================================
 // Seed Data
 // ============================================================
 const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,' + btoa(
@@ -423,6 +493,7 @@ function getDefaultTermsAr(): string {
 
 export async function seedDatabase(): Promise<void> {
   if (!db) return;
+  await seedCategories();
   // Seed laptops if empty
   const laptopsSnapshot = await get(getRef('laptops')!);
   if (!laptopsSnapshot.exists()) {

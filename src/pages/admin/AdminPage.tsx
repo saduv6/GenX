@@ -5,10 +5,11 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { hashPassword, setAdminToken, generateAdminToken, clearAdminToken, isAdminAuthenticated, seedDatabase, findAdminUser, changeAdminPassword, getAdminUsers, createAdminUser, setLoggedInAdmin, getLoggedInAdmin, clearLoggedInAdmin, addAuditLog } from '@/lib/firebase';
-import { LayoutDashboard, ShoppingBag, Laptop, Image, Settings, LogOut, Lock, Circle as HelpCircle, Users, ScrollText } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Laptop, Image, Settings, LogOut, Lock, Circle as HelpCircle, Users, ScrollText, Tags } from 'lucide-react';
 import { DashboardTab } from './DashboardTab';
 import { OrdersTab } from './OrdersTab';
 import { LaptopsTab } from './LaptopsTab';
+import { CategoriesTab } from './CategoriesTab';
 import { ImagesTab } from './ImagesTab';
 import { SettingsTab } from './SettingsTab';
 import { FaqTab } from './FaqTab';
@@ -262,6 +263,7 @@ function AdminDashboard({ onLogout, forceChange, setForceChange, loggedInUserId,
     { path: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: 'orders', label: 'Orders', icon: ShoppingBag },
     { path: 'laptops', label: 'Laptops', icon: Laptop },
+    { path: 'categories', label: 'Categories', icon: Tags },
     { path: 'images', label: 'Images', icon: Image },
     { path: 'faqs', label: 'FAQs', icon: HelpCircle },
     { path: 'admins', label: 'Admins', icon: Users },
@@ -317,6 +319,7 @@ function AdminDashboard({ onLogout, forceChange, setForceChange, loggedInUserId,
           <Route path="/dashboard" element={<DashboardTab />} />
           <Route path="/orders" element={<OrdersTab />} />
           <Route path="/laptops" element={<LaptopsTab />} />
+          <Route path="/categories" element={<CategoriesTab />} />
           <Route path="/images" element={<ImagesTab />} />
           <Route path="/faqs" element={<FaqTab />} />
           <Route path="/admins" element={<AdminsTab />} />

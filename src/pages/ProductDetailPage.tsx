@@ -6,12 +6,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Minus, Plus, ShoppingCart, CircleCheck as CheckCircle, Circle as XCircle } from 'lucide-react';
-import { getLaptopById } from '@/lib/firebase';
+import { getLaptopById, subscribeToCategories } from '@/lib/firebase';
+import { getProductImages } from '@/lib/product-utils';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { useToast } from '@/hooks/useToast';
 import { useLanguage } from '@/hooks/useLanguage';
-import type { Laptop, LaptopVariant } from '@/types';
+import type { Category, Laptop, LaptopVariant } from '@/types';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,7 +24,11 @@ export function ProductDetailPage() {
   const [laptop, setLaptop] = useState<Laptop | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<LaptopVariant | null>(null);
+  const [activeImage, setActiveImage] = useState(0);
+  const [categories, setCategories] = useState<Category[]>([]);
   const primaryColor = settings?.primaryColor || '#00ff00';
+
+  useEffect(() => subscribeToCategories(setCategories), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,6 +36,7 @@ export function ProductDetailPage() {
     setLaptop(null);
     setQuantity(1);
     setSelectedVariant(null);
+    setActiveImage(0);
 
     async function load() {
       if (!id) return;
@@ -105,6 +111,16 @@ export function ProductDetailPage() {
   }
 
   const hasVariants = laptop.variants && laptop.variants.length > 0;
+  const gallery = getProductImages(laptop);
+  const customSpecs = laptop.specs ?? [];
+  const categoryIds = laptop.categories?.length ? laptop.categories : [laptop.category];
+  const categoryLabels = categoryIds
+    .map(id => {
+      const c = categories.find(x => x.id === id);
+      return c ? ((lang === 'ar' && c.nameAr) ? c.nameAr : c.nameEn) : '';
+    })
+    .filter(Boolean)
+    .join(' · ');
 
   // Show specs: if variant selected, show variant RAM/storage, otherwise base
   const displayRam = selectedVariant ? selectedVariant.ram : laptop.ram;
@@ -134,12 +150,32 @@ export function ProductDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Image */}
-          <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden aspect-[4/3] flex items-center justify-center">
-            <img
-              src={laptop.image}
-              alt={getLaptopName(laptop)}
-              className="w-full h-full object-cover"
-            />
+          <div>
+            <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden aspect-[4/3] flex items-center justify-center">
+              {gallery.length > 0 ? (
+                <img
+                  src={gallery[activeImage] ?? gallery[0]}
+                  alt={getLaptopName(laptop)}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-gray-600 text-sm">No image</span>
+              )}
+            </div>
+            {gallery.length > 1 && (
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mt-3">
+                {gallery.map((src, index) => (
+                  <button
+                    key={src}
+                    onClick={() => setActiveImage(index)}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${index === activeImage ? '' : 'border-white/10 hover:border-white/30'}`}
+                    style={index === activeImage ? { borderColor: primaryColor } : {}}
+                  >
+                    <img src={src} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Details */}
@@ -151,7 +187,7 @@ export function ProductDetailPage() {
                 </span>
               )}
               <span className="px-2 py-1 rounded text-[10px] font-medium bg-white/5 text-gray-400 uppercase">
-                {laptop.category}
+                {categoryLabels}
               </span>
             </div>
 
@@ -239,6 +275,18 @@ export function ProductDetailPage() {
                     <span className="text-gray-300">{spec.value}</span>
                   </div>
                 ))}
+                {customSpecs.map(spec => (
+                  <div key={spec.id} className="flex justify-between gap-4 text-sm">
+                    <span className="text-gray-500">{(lang === 'ar' && spec.nameAr) ? spec.nameAr : spec.nameEn}</span>
+                    <span className="text-gray-300 text-end">{(lang === 'ar' && spec.valueAr) ? spec.valueAr : spec.valueEn}</span>
+                  </div>
+                ))}
+                {laptop.sku && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">SKU</span>
+                    <span className="text-gray-300 font-mono">{laptop.sku}</span>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -5,22 +5,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Star, ChevronLeft, ChevronRight, Eye, Plus, ChartBar as BarChart3 } from 'lucide-react';
-import { subscribeToLaptops, addCompareId, getCompareIds } from '@/lib/firebase';
+import { subscribeToLaptops, subscribeToCategories, addCompareId, getCompareIds } from '@/lib/firebase';
 import { useSettings } from '@/hooks/useSettings';
 import { useCart } from '@/hooks/useCart';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/hooks/useToast';
 import { useLanguage } from '@/hooks/useLanguage';
-import type { Laptop } from '@/types';
-
-const CATEGORIES = [
-  { id: 'all', nameKey: 'all', slug: 'all' },
-  { id: 'best-selling', nameKey: 'bestSelling', slug: 'best-selling' },
-  { id: 'gaming', nameKey: 'gaming', slug: 'gaming' },
-  { id: 'business', nameKey: 'business', slug: 'business' },
-  { id: 'student', nameKey: 'student', slug: 'student' },
-  { id: 'new-arrivals', nameKey: 'newArrivals', slug: 'new-arrivals' },
-] as const;
+import { getCategoryScope, laptopInCategories } from '@/lib/product-utils';
+import type { Laptop, Category } from '@/types';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -30,6 +22,7 @@ export function StorePage() {
   const { addToast } = useToast();
   const { lang, t } = useLanguage();
   const [laptops, setLaptops] = useState<Laptop[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -48,13 +41,24 @@ export function StorePage() {
     return unsubscribe;
   }, []);
 
+  useEffect(() => subscribeToCategories(setCategories), []);
+
   const getLaptopName = (l: Laptop) => (lang === 'ar' && l.nameAr) ? l.nameAr : l.name;
+  const getCategoryName = (c: Category) => (lang === 'ar' && c.nameAr) ? c.nameAr : c.nameEn;
+
+  const activeCategories = useMemo(() => categories.filter(c => c.isActive), [categories]);
+  const topCategories = activeCategories.filter(c => !c.parentId).sort((a, b) => a.sortOrder - b.sortOrder);
+  const selectedCategory = activeCategories.find(c => c.id === activeCategory);
+  const subCategories = selectedCategory
+    ? activeCategories.filter(c => c.parentId === selectedCategory.id).sort((a, b) => a.sortOrder - b.sortOrder)
+    : [];
 
   const filteredLaptops = useMemo(() => {
     let result = laptops;
 
     if (activeCategory !== 'all') {
-      result = result.filter(l => l.category === activeCategory);
+      const scope = getCategoryScope(activeCategory, categories);
+      result = result.filter(l => laptopInCategories(l, scope));
     }
 
     if (debouncedSearch.trim()) {
@@ -69,7 +73,7 @@ export function StorePage() {
 
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [laptops, activeCategory, debouncedSearch, lang]);
+  }, [laptops, categories, activeCategory, debouncedSearch, lang]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLaptops.length / ITEMS_PER_PAGE));
   const paginatedLaptops = filteredLaptops.slice(
@@ -164,21 +168,53 @@ export function StorePage() {
 
           {/* Category filters */}
           <div className="flex flex-wrap gap-2 justify-center mb-6">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => { setActiveCategory(cat.slug); setCurrentPage(1); }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
-                  activeCategory === cat.slug
-                    ? 'text-black border-transparent'
-                    : 'text-gray-400 border-white/10 hover:border-white/20 hover:text-white'
-                }`}
-                style={activeCategory === cat.slug ? { backgroundColor: primaryColor } : {}}
-              >
-                {t(cat.nameKey)}
-              </button>
-            ))}
+            <button
+              onClick={() => { setActiveCategory('all'); setCurrentPage(1); }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                activeCategory === 'all'
+                  ? 'text-black border-transparent'
+                  : 'text-gray-400 border-white/10 hover:border-white/20 hover:text-white'
+              }`}
+              style={activeCategory === 'all' ? { backgroundColor: primaryColor } : {}}
+            >
+              {t('all')}
+            </button>
+            {topCategories.map(cat => {
+              const isSelected = activeCategory === cat.id || selectedCategory?.parentId === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => { setActiveCategory(cat.id); setCurrentPage(1); }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                    isSelected
+                      ? 'text-black border-transparent'
+                      : 'text-gray-400 border-white/10 hover:border-white/20 hover:text-white'
+                  }`}
+                  style={isSelected ? { backgroundColor: primaryColor } : {}}
+                >
+                  {getCategoryName(cat)}
+                </button>
+              );
+            })}
           </div>
+          {subCategories.length > 0 && (
+            <div className="flex flex-wrap gap-2 justify-center mb-6 -mt-3">
+              {subCategories.map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => { setActiveCategory(sub.id); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${
+                    activeCategory === sub.id
+                      ? 'text-black border-transparent'
+                      : 'text-gray-400 border-white/10 hover:border-white/20 hover:text-white'
+                  }`}
+                  style={activeCategory === sub.id ? { backgroundColor: primaryColor } : {}}
+                >
+                  {getCategoryName(sub)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

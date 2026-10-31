@@ -11,12 +11,26 @@ export interface LaptopVariant {
   inStock: boolean;
 }
 
+export interface ProductSpec {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  valueEn: string;
+  valueAr: string;
+}
+
 export interface Laptop {
   id: string;
   name: string;
   nameAr?: string;
   descriptionAr?: string;
   image: string;
+  /** Gallery images; index 0 is the main image. `image` mirrors images[0]. */
+  images?: string[];
+  sku?: string;
+  specs?: ProductSpec[];
+  /** Category ids the product belongs to. `category` remains the primary one. */
+  categories?: string[];
   price: number;
   category: string;
   cpu: string;
@@ -121,11 +135,15 @@ export interface AuditLog {
   timestamp: string;
 }
 
-export type Category = {
+export interface Category {
   id: string;
-  name: string;
-  slug: string;
-};
+  nameEn: string;
+  nameAr: string;
+  image: string;
+  parentId: string;
+  sortOrder: number;
+  isActive: boolean;
+}
 
 export type ToastType = 'success' | 'error' | 'info';
 
